@@ -1,0 +1,116 @@
+# Electromon — shared infrastructure services
+# Project name comes from COMPOSE_PROJECT_NAME in .env (default: electromon-local)
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-electromon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-electromon}
+      POSTGRES_DB: ${POSTGRES_DB:-electromon}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../scripts/init-postgres.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-electromon} -d ${POSTGRES_DB:-electromon}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging: *default-logging
+    networks:
+      - electromon
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+    networks:
+      - electromon
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    command: >
+      sh -c "rabbitmq-plugins enable --offline rabbitmq_prometheus &&
+             docker-entrypoint.sh rabbitmq-server"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-electromon}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-electromon}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging: *default-logging
+    networks:
+      - electromon
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-electromon}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-electromonsecret}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging: *default-logging
+    networks:
+      - electromon
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-electromon}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-electromonsecret}
+      S3_BUCKET: ${S3_BUCKET:-electromon}
+    entrypoint: /bin/sh
+    command: /scripts/init-minio.sh
+    volumes:
+      - ../scripts/init-minio.sh:/scripts/init-minio.sh:ro
+    restart: "no"
+    networks:
+      - electromon
+
+networks:
+  electromon:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  minio_data:

@@ -1,0 +1,64 @@
+# API application services — migrate + api
+# Usage: docker compose -f infra/compose/base.yml -f infra/compose/local.yml -f infra/compose/apps.yml --profile apps up -d
+
+x-api-env: &api-env
+  NODE_ENV: ${NODE_ENV:-production}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-electromon}:${POSTGRES_PASSWORD:-electromon}@postgres:5432/${POSTGRES_DB:-electromon}?schema=public
+  REDIS_URL: redis://redis:6379
+  RABBITMQ_URL: amqp://${RABBITMQ_USER:-electromon}:${RABBITMQ_PASSWORD:-electromon}@rabbitmq:5672
+  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-dev-access-secret-min-32-chars-long}
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-local-dev-refresh-secret-min-32-chars-long}
+  JWT_ACCESS_EXPIRY: ${JWT_ACCESS_EXPIRY:-15m}
+  JWT_REFRESH_EXPIRY: ${JWT_REFRESH_EXPIRY:-7d}
+  S3_ENDPOINT: http://minio:9000
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:-electromon}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:-electromonsecret}
+  S3_BUCKET: ${S3_BUCKET:-electromon}
+  S3_REGION: ${S3_REGION:-us-east-1}
+  API_PORT: "3001"
+  CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+
+services:
+  migrate:
+    profiles: ["apps"]
+    build:
+      context: ../..
+      dockerfile: infra/dockerfiles/migrate.Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-electromon}:${POSTGRES_PASSWORD:-electromon}@postgres:5432/${POSTGRES_DB:-electromon}?schema=public
+      RUN_SEED: ${RUN_SEED:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - electromon
+
+  api:
+    profiles: ["apps"]
+    build:
+      context: ../..
+      dockerfile: infra/dockerfiles/api.Dockerfile
+    environment:
+      <<: *api-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/v1/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - electromon

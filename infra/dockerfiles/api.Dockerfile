@@ -1,0 +1,55 @@
+# syntax=docker/dockerfile:1
+
+# Electromon API — production image (build context: api project root)
+
+FROM node:20-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+RUN apk add --no-cache libc6-compat
+
+FROM base AS deps
+WORKDIR /app
+
+COPY pnpm-lock.yaml package.json ./
+COPY db/package.json ./db/
+COPY db/prisma.config.ts ./db/
+COPY db/prisma ./db/prisma/
+COPY shared/package.json ./shared/
+
+RUN pnpm install --frozen-lockfile
+
+FROM base AS builder
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+RUN pnpm shared:build && pnpm db:build && pnpm build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+RUN apk add --no-cache wget \
+  && addgroup --system --gid 1001 nodejs \
+  && adduser --system --uid 1001 nestjs
+
+COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nestjs:nodejs /app/db ./db
+COPY --from=builder --chown=nestjs:nodejs /app/shared ./shared
+
+COPY --chown=nestjs:nodejs infra/scripts/entrypoint-api.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+USER nestjs
+
+EXPOSE 3001
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget -qO- http://localhost:3001/api/v1/health/ready || exit 1
+
+ENTRYPOINT ["/entrypoint.sh"]
