@@ -10,6 +10,7 @@ export declare class AuthController {
         user: {
             id: string;
             email: string;
+            phoneNumber: string | null;
             firstName: string;
             lastName: string;
             role: import("db/dist").$Enums.CampaignRole;
@@ -23,6 +24,7 @@ export declare class AuthController {
     register(dto: RegisterDto): Promise<{
         id: string;
         email: string;
+        phoneNumber: string | null;
     }>;
     refresh(dto: RefreshTokenDto): Promise<{
         accessToken: string;
@@ -34,6 +36,7 @@ export declare class AuthController {
     session(user: JwtPayload): Promise<{
         id: string;
         email: string;
+        phoneNumber: string | null;
         firstName: string;
         lastName: string;
         mfaEnabled: boolean;

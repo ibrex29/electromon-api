@@ -10,12 +10,12 @@ export declare class CommitmentsController {
             name: string;
         };
     } & {
+        description: string | null;
+        status: import("db/dist").$Enums.CommitmentStatus;
         id: string;
         createdAt: Date;
-        campaignId: string;
-        status: import("db/dist").$Enums.CommitmentStatus;
         updatedAt: Date;
-        description: string | null;
+        campaignId: string;
         title: string;
         supportGroupId: string;
         targetValue: number;
@@ -28,12 +28,12 @@ export declare class CommitmentsController {
             name: string;
         };
     } & {
+        description: string | null;
+        status: import("db/dist").$Enums.CommitmentStatus;
         id: string;
         createdAt: Date;
-        campaignId: string;
-        status: import("db/dist").$Enums.CommitmentStatus;
         updatedAt: Date;
-        description: string | null;
+        campaignId: string;
         title: string;
         supportGroupId: string;
         targetValue: number;
@@ -46,12 +46,12 @@ export declare class CommitmentsController {
             name: string;
         };
     } & {
+        description: string | null;
+        status: import("db/dist").$Enums.CommitmentStatus;
         id: string;
         createdAt: Date;
-        campaignId: string;
-        status: import("db/dist").$Enums.CommitmentStatus;
         updatedAt: Date;
-        description: string | null;
+        campaignId: string;
         title: string;
         supportGroupId: string;
         targetValue: number;
@@ -64,12 +64,12 @@ export declare class CommitmentsController {
             name: string;
         };
     } & {
+        description: string | null;
+        status: import("db/dist").$Enums.CommitmentStatus;
         id: string;
         createdAt: Date;
-        campaignId: string;
-        status: import("db/dist").$Enums.CommitmentStatus;
         updatedAt: Date;
-        description: string | null;
+        campaignId: string;
         title: string;
         supportGroupId: string;
         targetValue: number;

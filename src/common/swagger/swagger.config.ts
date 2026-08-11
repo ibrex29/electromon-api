@@ -14,7 +14,7 @@ export function buildSwaggerDocument() {
         'and election-day operations.',
         '',
         '### Authentication',
-        '1. Call `POST /auth/login` with email and password',
+        '1. Call `POST /auth/login` with phone number and password',
         '2. Copy the `accessToken` from the response',
         '3. Click **Authorize** above and paste: `Bearer <accessToken>`',
       ].join('\n'),

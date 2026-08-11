@@ -49,6 +49,7 @@ const bcrypt = __importStar(require("bcrypt"));
 const crypto_1 = require("crypto");
 const prisma_service_1 = require("../../common/prisma/prisma.service");
 const scope_resolver_service_1 = require("../../common/collation/scope-resolver.service");
+const phone_util_1 = require("./phone.util");
 let AuthService = class AuthService {
     prisma;
     jwtService;
@@ -58,9 +59,15 @@ let AuthService = class AuthService {
         this.jwtService = jwtService;
         this.scopeResolver = scopeResolver;
     }
-    async validateUser(email, password) {
-        const user = await this.prisma.user.findUnique({
-            where: { email },
+    async validateUser(phoneNumber, password) {
+        const candidates = (0, phone_util_1.phoneLookupCandidates)(phoneNumber);
+        if (candidates.length === 0) {
+            throw new common_1.UnauthorizedException('Invalid credentials');
+        }
+        const user = await this.prisma.user.findFirst({
+            where: {
+                OR: candidates.map((phone) => ({ phoneNumber: phone })),
+            },
             include: {
                 memberships: {
                     where: { isActive: true },
@@ -78,7 +85,7 @@ let AuthService = class AuthService {
         return user;
     }
     async login(dto, ipAddress) {
-        const user = await this.validateUser(dto.email, dto.password);
+        const user = await this.validateUser(dto.phoneNumber, dto.password);
         const membership = user.memberships[0];
         const payload = {
             sub: user.id,
@@ -98,6 +105,7 @@ let AuthService = class AuthService {
             user: {
                 id: user.id,
                 email: user.email,
+                phoneNumber: user.phoneNumber,
                 firstName: user.firstName,
                 lastName: user.lastName,
                 role: membership?.role,
@@ -111,9 +119,13 @@ let AuthService = class AuthService {
         };
     }
     async register(dto) {
+        const phoneNumber = (0, phone_util_1.normalizePhoneNumber)(dto.phoneNumber);
+        if (!phoneNumber) {
+            throw new common_1.BadRequestException('Invalid phone number');
+        }
         const existing = await this.prisma.user.findFirst({
             where: {
-                OR: [{ email: dto.email }, ...(dto.phoneNumber ? [{ phoneNumber: dto.phoneNumber }] : [])],
+                OR: [{ email: dto.email }, { phoneNumber }],
             },
         });
         if (existing) {
@@ -123,13 +135,13 @@ let AuthService = class AuthService {
         const user = await this.prisma.user.create({
             data: {
                 email: dto.email,
-                phoneNumber: dto.phoneNumber,
+                phoneNumber,
                 passwordHash,
                 firstName: dto.firstName,
                 lastName: dto.lastName,
             },
         });
-        return { id: user.id, email: user.email };
+        return { id: user.id, email: user.email, phoneNumber: user.phoneNumber };
     }
     async refresh(refreshToken) {
         const stored = await this.prisma.refreshToken.findUnique({
@@ -190,6 +202,7 @@ let AuthService = class AuthService {
         return {
             id: user.id,
             email: user.email,
+            phoneNumber: user.phoneNumber,
             firstName: user.firstName,
             lastName: user.lastName,
             mfaEnabled: user.mfaEnabled,

@@ -79,8 +79,9 @@ __decorate([
 ], AttachEc8aPhotoDto.prototype, "photoUrl", void 0);
 class RejectCollationResultDto {
     reason;
+    affectedPollingUnitIds;
     static _OPENAPI_METADATA_FACTORY() {
-        return { reason: { required: true, type: () => String } };
+        return { reason: { required: true, type: () => String }, affectedPollingUnitIds: { required: false, type: () => [String] } };
     }
 }
 exports.RejectCollationResultDto = RejectCollationResultDto;
@@ -89,6 +90,17 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], RejectCollationResultDto.prototype, "reason", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        type: [String],
+        description: 'Optional: polling unit ids in the ward that LGA believes need correction (LGA → ward return only)',
+        example: ['clxyz…'],
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsString)({ each: true }),
+    __metadata("design:type", Array)
+], RejectCollationResultDto.prototype, "affectedPollingUnitIds", void 0);
 class ApproveCollationResultDto {
     comment;
     static _OPENAPI_METADATA_FACTORY() {

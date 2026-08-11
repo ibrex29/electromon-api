@@ -81,6 +81,9 @@ let CollationController = class CollationController {
     resubmitWardToLga(user) {
         return this.collationService.resubmitWardToLga(user);
     }
+    returnLgaFlaggedPus(user, dto) {
+        return this.collationService.returnLgaFlaggedPus(user, dto);
+    }
     upsertResult(user, dto) {
         return this.collationService.upsertResult(user, dto);
     }
@@ -303,6 +306,19 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], CollationController.prototype, "resubmitWardToLga", null);
+__decorate([
+    (0, common_1.Patch)('ward/return-flagged-pus'),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.WARD_RA_OFFICER),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Return all LGA-flagged polling units to PU agents after LGA returned the ward',
+    }),
+    openapi.ApiResponse({ status: 200 }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, collation_dto_1.RejectCollationResultDto]),
+    __metadata("design:returntype", void 0)
+], CollationController.prototype, "returnLgaFlaggedPus", null);
 __decorate([
     (0, common_1.Post)('results'),
     (0, auth_decorators_1.Roles)(...shared_1.COLLATION_ROLES),

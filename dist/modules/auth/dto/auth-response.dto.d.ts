@@ -15,6 +15,7 @@ export declare class CollationDashboardDto implements CollationDashboardMeta {
 export declare class AuthUserDto {
     id: string;
     email: string;
+    phoneNumber?: string | null;
     firstName: string;
     lastName: string;
     role?: CampaignRole;

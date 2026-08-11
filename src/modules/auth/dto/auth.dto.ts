@@ -1,13 +1,17 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEmail, IsNotEmpty, IsString, MinLength, Matches } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class LoginDto {
   @ApiProperty({
-    example: 'director@electromon.ng',
-    description: 'Registered user email address',
+    example: '+2348000000004',
+    description: 'Registered phone number (e.g. +2348… or 080…)',
   })
-  @IsEmail()
-  email: string;
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^[\d+\s\-()]+$/, {
+    message: 'phoneNumber must be a valid phone number',
+  })
+  phoneNumber: string;
 
   @ApiProperty({
     example: 'ChangeMe123!',
@@ -47,10 +51,10 @@ export class RegisterDto {
   @IsString()
   lastName: string;
 
-  @ApiPropertyOptional({ example: '+2348000000002' })
-  @IsOptional()
+  @ApiProperty({ example: '+2348000000002', description: 'Required for phone-based login' })
   @IsString()
-  phoneNumber?: string;
+  @IsNotEmpty()
+  phoneNumber: string;
 }
 
 export class ChangePasswordDto {

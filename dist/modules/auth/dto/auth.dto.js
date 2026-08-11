@@ -14,21 +14,25 @@ const openapi = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
 const swagger_1 = require("@nestjs/swagger");
 class LoginDto {
-    email;
+    phoneNumber;
     password;
     static _OPENAPI_METADATA_FACTORY() {
-        return { email: { required: true, type: () => String, format: "email" }, password: { required: true, type: () => String, minLength: 8 } };
+        return { phoneNumber: { required: true, type: () => String, pattern: "^[\\d+\\s\\-()]+$" }, password: { required: true, type: () => String, minLength: 8 } };
     }
 }
 exports.LoginDto = LoginDto;
 __decorate([
     (0, swagger_1.ApiProperty)({
-        example: 'director@electromon.ng',
-        description: 'Registered user email address',
+        example: '+2348000000004',
+        description: 'Registered phone number (e.g. +2348… or 080…)',
     }),
-    (0, class_validator_1.IsEmail)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.Matches)(/^[\d+\s\-()]+$/, {
+        message: 'phoneNumber must be a valid phone number',
+    }),
     __metadata("design:type", String)
-], LoginDto.prototype, "email", void 0);
+], LoginDto.prototype, "phoneNumber", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
         example: 'ChangeMe123!',
@@ -62,7 +66,7 @@ class RegisterDto {
     lastName;
     phoneNumber;
     static _OPENAPI_METADATA_FACTORY() {
-        return { email: { required: true, type: () => String, format: "email" }, password: { required: true, type: () => String, minLength: 8 }, firstName: { required: true, type: () => String }, lastName: { required: true, type: () => String }, phoneNumber: { required: false, type: () => String } };
+        return { email: { required: true, type: () => String, format: "email" }, password: { required: true, type: () => String, minLength: 8 }, firstName: { required: true, type: () => String }, lastName: { required: true, type: () => String }, phoneNumber: { required: true, type: () => String } };
     }
 }
 exports.RegisterDto = RegisterDto;
@@ -88,9 +92,9 @@ __decorate([
     __metadata("design:type", String)
 ], RegisterDto.prototype, "lastName", void 0);
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({ example: '+2348000000002' }),
-    (0, class_validator_1.IsOptional)(),
+    (0, swagger_1.ApiProperty)({ example: '+2348000000002', description: 'Required for phone-based login' }),
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "phoneNumber", void 0);
 class ChangePasswordDto {

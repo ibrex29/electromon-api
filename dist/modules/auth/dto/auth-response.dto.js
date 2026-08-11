@@ -77,6 +77,7 @@ __decorate([
 class AuthUserDto {
     id;
     email;
+    phoneNumber;
     firstName;
     lastName;
     role;
@@ -86,7 +87,7 @@ class AuthUserDto {
     mfaEnabled;
     dashboard;
     static _OPENAPI_METADATA_FACTORY() {
-        return { id: { required: true, type: () => String }, email: { required: true, type: () => String }, firstName: { required: true, type: () => String }, lastName: { required: true, type: () => String }, role: { required: false, enum: require("../../../../shared/dist/enums").CampaignRole }, scopeType: { required: false, enum: require("../../../../shared/dist/enums").ScopeType }, scopeId: { required: false, type: () => String }, campaignId: { required: false, type: () => String }, mfaEnabled: { required: true, type: () => Boolean }, dashboard: { required: false, type: () => require("./auth-response.dto").CollationDashboardDto } };
+        return { id: { required: true, type: () => String }, email: { required: true, type: () => String }, phoneNumber: { required: false, type: () => String, nullable: true }, firstName: { required: true, type: () => String }, lastName: { required: true, type: () => String }, role: { required: false, enum: require("../../../../shared/dist/enums").CampaignRole }, scopeType: { required: false, enum: require("../../../../shared/dist/enums").ScopeType }, scopeId: { required: false, type: () => String }, campaignId: { required: false, type: () => String }, mfaEnabled: { required: true, type: () => Boolean }, dashboard: { required: false, type: () => require("./auth-response.dto").CollationDashboardDto } };
     }
 }
 exports.AuthUserDto = AuthUserDto;
@@ -98,6 +99,10 @@ __decorate([
     (0, swagger_1.ApiProperty)({ example: 'director@electromon.ng' }),
     __metadata("design:type", String)
 ], AuthUserDto.prototype, "email", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ example: '+2348000000001' }),
+    __metadata("design:type", Object)
+], AuthUserDto.prototype, "phoneNumber", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ example: 'Campaign' }),
     __metadata("design:type", String)

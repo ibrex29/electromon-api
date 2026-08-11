@@ -10,6 +10,7 @@ export declare class AttachEc8aPhotoDto {
 }
 export declare class RejectCollationResultDto {
     reason: string;
+    affectedPollingUnitIds?: string[];
 }
 export declare class ApproveCollationResultDto {
     comment?: string;

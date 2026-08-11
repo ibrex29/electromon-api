@@ -55,7 +55,7 @@ describe('Auth (e2e)', () => {
   it('POST /api/v1/auth/login returns tokens for valid credentials', () => {
     return request(app.getHttpServer())
       .post('/api/v1/auth/login')
-      .send({ email: 'director@electromon.ng', password: 'ChangeMe123!' })
+      .send({ phoneNumber: '+2348000000001', password: 'ChangeMe123!' })
       .expect(201)
       .expect((res) => {
         expect(res.body.accessToken).toBeDefined();
@@ -67,7 +67,7 @@ describe('Auth (e2e)', () => {
   it('POST /api/v1/auth/login rejects invalid credentials', () => {
     return request(app.getHttpServer())
       .post('/api/v1/auth/login')
-      .send({ email: 'director@electromon.ng', password: 'WrongPass123!' })
+      .send({ phoneNumber: '+2348000000001', password: 'WrongPass123!' })
       .expect(401);
   });
 });
@@ -88,7 +88,7 @@ describe('Protected routes (e2e)', () => {
 
     const login = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
-      .send({ email: 'director@electromon.ng', password: 'ChangeMe123!' });
+      .send({ phoneNumber: '+2348000000001', password: 'ChangeMe123!' });
 
     accessToken = login.body.accessToken;
   });

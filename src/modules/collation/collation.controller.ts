@@ -231,6 +231,19 @@ export class CollationController {
     return this.collationService.resubmitWardToLga(user);
   }
 
+  @Patch('ward/return-flagged-pus')
+  @Roles(CampaignRole.WARD_RA_OFFICER)
+  @ApiOperation({
+    summary:
+      'Return all LGA-flagged polling units to PU agents after LGA returned the ward',
+  })
+  returnLgaFlaggedPus(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: RejectCollationResultDto,
+  ) {
+    return this.collationService.returnLgaFlaggedPus(user, dto);
+  }
+
   @Post('results')
   @Roles(...COLLATION_ROLES)
   @ApiOperation({ summary: 'Create or update draft collation result at current scope' })

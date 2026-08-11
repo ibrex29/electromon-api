@@ -17,11 +17,11 @@ const auth_service_1 = require("../auth.service");
 let LocalStrategy = class LocalStrategy extends (0, passport_1.PassportStrategy)(passport_local_1.Strategy) {
     authService;
     constructor(authService) {
-        super({ usernameField: 'email' });
+        super({ usernameField: 'phoneNumber' });
         this.authService = authService;
     }
-    async validate(email, password) {
-        return this.authService.validateUser(email, password);
+    async validate(phoneNumber, password) {
+        return this.authService.validateUser(phoneNumber, password);
     }
 };
 exports.LocalStrategy = LocalStrategy;

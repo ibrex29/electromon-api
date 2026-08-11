@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PrismaClient, CampaignRole, ScopeType, SupportGroupCategory, VerificationStatus, CommitmentStatus, FieldReportType, FieldReportStatus, IncidentType, IncidentSeverity, SituationStatus } from '../src/generated/client';
+import { PrismaClient, Prisma, CampaignRole, ScopeType, SupportGroupCategory, VerificationStatus, CommitmentStatus, FieldReportType, FieldReportStatus, IncidentType, IncidentSeverity, SituationStatus } from '../src/generated/client';
 import { createPgAdapter } from '../src/client';
 import { seedJigawaInecFromDirectory } from './seed-inec';
 import { seedHadejiaCollationResults, seedStateLgaSummaries } from './seed-collation';
@@ -9,9 +9,9 @@ import * as bcrypt from 'bcrypt';
 
 import { NIGERIAN_REGISTERED_PARTIES } from '../../shared/src/parties';
 
-const TRACKED_PARTIES = NIGERIAN_REGISTERED_PARTIES;
+const TRACKED_PARTIES = NIGERIAN_REGISTERED_PARTIES as unknown as Prisma.InputJsonValue;
 const CLIENT_PARTY_CODE = 'APC';
-const PARTY_CODES = TRACKED_PARTIES.map((party) => party.code);
+const PARTY_CODES = NIGERIAN_REGISTERED_PARTIES.map((party) => party.code);
 
 const __dirname = resolve(fileURLToPath(import.meta.url), '..');
 
@@ -125,7 +125,11 @@ async function main() {
 
   const director = await prisma.user.upsert({
     where: { email: 'director@electromon.ng' },
-    update: {},
+    update: {
+      phoneNumber: '+2348000000001',
+      passwordHash,
+      isActive: true,
+    },
     create: {
       email: 'director@electromon.ng',
       phoneNumber: '+2348000000001',
@@ -237,7 +241,11 @@ async function main() {
   for (const officer of collationUsers) {
     const user = await prisma.user.upsert({
       where: { email: officer.email },
-      update: {},
+      update: {
+        phoneNumber: officer.phoneNumber,
+        passwordHash,
+        isActive: true,
+      },
       create: {
         email: officer.email,
         phoneNumber: officer.phoneNumber,
@@ -572,13 +580,14 @@ async function main() {
   console.log('  Campaign:', campaign.name);
   console.log('  Password for all accounts: ChangeMe123!');
   console.log('');
-  console.log('  Collation hierarchy accounts:');
-  console.log('    1. PU Officer:        pu.officer@electromon.ng       (17-13-01-001 ATAFI/RAMIN ATAFI)');
-  console.log('    2. Ward/RA Officer:   ward.officer@electromon.ng     (ATAFI ward)');
-  console.log('    3. LGA Officer:       lga.officer@electromon.ng      (Hadejia LGA)');
-  console.log('    4. State Officer:     state.officer@electromon.ng    (Jigawa State)');
-  console.log('    5. National Officer:  national.officer@electromon.ng (Abuja)');
-  console.log('    Admin:               director@electromon.ng');
+  console.log('  Collation hierarchy accounts (login with phone + password):');
+  console.log('    1. PU Officer:        +2348000000002  (17-13-01-001 ATAFI/RAMIN ATAFI)');
+  console.log('    2. Ward/RA Officer:   +2348000000003  (ATAFI ward)');
+  console.log('    3. LGA Officer:       +2348000000004  (Hadejia LGA)');
+  console.log('    4. State Officer:     +2348000000005  (Jigawa State)');
+  console.log('    5. National Officer:  +2348000000006  (Abuja)');
+  console.log('    Admin:               +2348000000001  (director)');
+  console.log('    (also accepted as 080… form, e.g. 08000000004)');
   console.log('');
   console.log('  Suggested test cases:');
   console.log('    PU officer  → draft/submit 17-13-01-001, upload EC8A, report incidents');

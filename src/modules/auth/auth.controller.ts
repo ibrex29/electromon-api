@@ -29,7 +29,7 @@ export class AuthController {
   @Public()
   @Post('login')
   @ApiOperation({
-    summary: 'Login with email and password',
+    summary: 'Login with phone number and password',
     description: 'Returns JWT access token, refresh token, and user profile with campaign role.',
   })
   @ApiOkResponse({ type: LoginResponseDto, description: 'Login successful' })

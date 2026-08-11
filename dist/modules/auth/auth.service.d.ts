@@ -7,14 +7,14 @@ export declare class AuthService {
     private jwtService;
     private scopeResolver;
     constructor(prisma: PrismaService, jwtService: JwtService, scopeResolver: ScopeResolverService);
-    validateUser(email: string, password: string): Promise<{
+    validateUser(phoneNumber: string, password: string): Promise<{
         memberships: {
             id: string;
             createdAt: Date;
-            userId: string;
-            campaignId: string;
             updatedAt: Date;
             isActive: boolean;
+            userId: string;
+            campaignId: string;
             role: import("db/dist").$Enums.CampaignRole;
             scopeType: import("db/dist").$Enums.ScopeType | null;
             scopeId: string | null;
@@ -23,13 +23,13 @@ export declare class AuthService {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        isActive: boolean;
         email: string;
-        firstName: string;
-        lastName: string;
         phoneNumber: string | null;
         passwordHash: string;
+        firstName: string;
+        lastName: string;
         otherNames: string | null;
+        isActive: boolean;
         mfaEnabled: boolean;
         mfaSecret: string | null;
     }>;
@@ -39,6 +39,7 @@ export declare class AuthService {
         user: {
             id: string;
             email: string;
+            phoneNumber: string | null;
             firstName: string;
             lastName: string;
             role: import("db/dist").$Enums.CampaignRole;
@@ -52,6 +53,7 @@ export declare class AuthService {
     register(dto: RegisterDto): Promise<{
         id: string;
         email: string;
+        phoneNumber: string | null;
     }>;
     refresh(refreshToken: string): Promise<{
         accessToken: string;
@@ -63,6 +65,7 @@ export declare class AuthService {
     getSession(userId: string): Promise<{
         id: string;
         email: string;
+        phoneNumber: string | null;
         firstName: string;
         lastName: string;
         mfaEnabled: boolean;

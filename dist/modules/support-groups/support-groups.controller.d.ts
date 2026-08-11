@@ -12,12 +12,12 @@ export declare class SupportGroupsController {
     } & {
         id: string;
         createdAt: Date;
-        campaignId: string;
+        updatedAt: Date;
         name: string;
+        campaignId: string;
+        lgaId: string | null;
         latitude: number | null;
         longitude: number | null;
-        updatedAt: Date;
-        lgaId: string | null;
         category: import("db/dist").$Enums.SupportGroupCategory;
         leaderName: string;
         leaderPhone: string;
@@ -35,12 +35,12 @@ export declare class SupportGroupsController {
     } & {
         id: string;
         createdAt: Date;
-        campaignId: string;
+        updatedAt: Date;
         name: string;
+        campaignId: string;
+        lgaId: string | null;
         latitude: number | null;
         longitude: number | null;
-        updatedAt: Date;
-        lgaId: string | null;
         category: import("db/dist").$Enums.SupportGroupCategory;
         leaderName: string;
         leaderPhone: string;
@@ -58,12 +58,12 @@ export declare class SupportGroupsController {
     } & {
         id: string;
         createdAt: Date;
-        campaignId: string;
+        updatedAt: Date;
         name: string;
+        campaignId: string;
+        lgaId: string | null;
         latitude: number | null;
         longitude: number | null;
-        updatedAt: Date;
-        lgaId: string | null;
         category: import("db/dist").$Enums.SupportGroupCategory;
         leaderName: string;
         leaderPhone: string;
@@ -81,12 +81,12 @@ export declare class SupportGroupsController {
     } & {
         id: string;
         createdAt: Date;
-        campaignId: string;
+        updatedAt: Date;
         name: string;
+        campaignId: string;
+        lgaId: string | null;
         latitude: number | null;
         longitude: number | null;
-        updatedAt: Date;
-        lgaId: string | null;
         category: import("db/dist").$Enums.SupportGroupCategory;
         leaderName: string;
         leaderPhone: string;

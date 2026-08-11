@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
@@ -6,6 +6,7 @@ import { CampaignRole, JwtPayload, ScopeType } from '@electromon/shared';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ScopeResolverService } from '../../common/collation/scope-resolver.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { normalizePhoneNumber, phoneLookupCandidates } from './phone.util';
 
 @Injectable()
 export class AuthService {
@@ -15,9 +16,16 @@ export class AuthService {
     private scopeResolver: ScopeResolverService,
   ) {}
 
-  async validateUser(email: string, password: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
+  async validateUser(phoneNumber: string, password: string) {
+    const candidates = phoneLookupCandidates(phoneNumber);
+    if (candidates.length === 0) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: candidates.map((phone) => ({ phoneNumber: phone })),
+      },
       include: {
         memberships: {
           where: { isActive: true },
@@ -39,7 +47,7 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, ipAddress?: string) {
-    const user = await this.validateUser(dto.email, dto.password);
+    const user = await this.validateUser(dto.phoneNumber, dto.password);
     const membership = user.memberships[0];
 
     const payload: JwtPayload = {
@@ -67,6 +75,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
+        phoneNumber: user.phoneNumber,
         firstName: user.firstName,
         lastName: user.lastName,
         role: membership?.role,
@@ -81,9 +90,14 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto) {
+    const phoneNumber = normalizePhoneNumber(dto.phoneNumber);
+    if (!phoneNumber) {
+      throw new BadRequestException('Invalid phone number');
+    }
+
     const existing = await this.prisma.user.findFirst({
       where: {
-        OR: [{ email: dto.email }, ...(dto.phoneNumber ? [{ phoneNumber: dto.phoneNumber }] : [])],
+        OR: [{ email: dto.email }, { phoneNumber }],
       },
     });
 
@@ -96,14 +110,14 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
-        phoneNumber: dto.phoneNumber,
+        phoneNumber,
         passwordHash,
         firstName: dto.firstName,
         lastName: dto.lastName,
       },
     });
 
-    return { id: user.id, email: user.email };
+    return { id: user.id, email: user.email, phoneNumber: user.phoneNumber };
   }
 
   async refresh(refreshToken: string) {
@@ -179,6 +193,7 @@ export class AuthService {
     return {
       id: user.id,
       email: user.email,
+      phoneNumber: user.phoneNumber,
       firstName: user.firstName,
       lastName: user.lastName,
       mfaEnabled: user.mfaEnabled,

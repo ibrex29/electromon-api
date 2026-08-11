@@ -22,13 +22,13 @@ export declare class VolunteersService {
         wardId: string | null;
         updatedAt: Date;
         email: string | null;
+        phoneNumber: string;
         firstName: string;
         lastName: string;
-        phoneNumber: string;
         role: string | null;
         coordinatorId: string | null;
-        performanceScore: number;
         isVerified: boolean;
+        performanceScore: number;
     })[]>;
     findOne(user: JwtPayload, id: string): Promise<{
         ward: {
@@ -46,13 +46,13 @@ export declare class VolunteersService {
         wardId: string | null;
         updatedAt: Date;
         email: string | null;
+        phoneNumber: string;
         firstName: string;
         lastName: string;
-        phoneNumber: string;
         role: string | null;
         coordinatorId: string | null;
-        performanceScore: number;
         isVerified: boolean;
+        performanceScore: number;
     }>;
     create(user: JwtPayload, dto: CreateVolunteerDto): Promise<{
         ward: {
@@ -70,13 +70,13 @@ export declare class VolunteersService {
         wardId: string | null;
         updatedAt: Date;
         email: string | null;
+        phoneNumber: string;
         firstName: string;
         lastName: string;
-        phoneNumber: string;
         role: string | null;
         coordinatorId: string | null;
-        performanceScore: number;
         isVerified: boolean;
+        performanceScore: number;
     }>;
     update(user: JwtPayload, id: string, dto: UpdateVolunteerDto): Promise<{
         ward: {
@@ -94,13 +94,13 @@ export declare class VolunteersService {
         wardId: string | null;
         updatedAt: Date;
         email: string | null;
+        phoneNumber: string;
         firstName: string;
         lastName: string;
-        phoneNumber: string;
         role: string | null;
         coordinatorId: string | null;
-        performanceScore: number;
         isVerified: boolean;
+        performanceScore: number;
     }>;
     remove(user: JwtPayload, id: string): Promise<{
         success: boolean;

@@ -49,7 +49,7 @@ __decorate([
     (0, auth_decorators_1.Public)(),
     (0, common_1.Post)('login'),
     (0, swagger_1.ApiOperation)({
-        summary: 'Login with email and password',
+        summary: 'Login with phone number and password',
         description: 'Returns JWT access token, refresh token, and user profile with campaign role.',
     }),
     (0, swagger_1.ApiOkResponse)({ type: auth_response_dto_1.LoginResponseDto, description: 'Login successful' }),

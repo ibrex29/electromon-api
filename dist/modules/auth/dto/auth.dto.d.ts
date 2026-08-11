@@ -1,5 +1,5 @@
 export declare class LoginDto {
-    email: string;
+    phoneNumber: string;
     password: string;
 }
 export declare class RefreshTokenDto {
@@ -10,7 +10,7 @@ export declare class RegisterDto {
     password: string;
     firstName: string;
     lastName: string;
-    phoneNumber?: string;
+    phoneNumber: string;
 }
 export declare class ChangePasswordDto {
     currentPassword: string;

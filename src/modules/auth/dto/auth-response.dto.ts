@@ -43,6 +43,9 @@ export class AuthUserDto {
   @ApiProperty({ example: 'director@electromon.ng' })
   email: string;
 
+  @ApiPropertyOptional({ example: '+2348000000001' })
+  phoneNumber?: string | null;
+
   @ApiProperty({ example: 'Campaign' })
   firstName: string;
 

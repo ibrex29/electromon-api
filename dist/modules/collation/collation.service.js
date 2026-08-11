@@ -146,10 +146,12 @@ let CollationService = class CollationService {
                     canReturnApprovedPus: false,
                     canResubmitToLga: false,
                     rejectionReason: null,
+                    flaggedPollingUnitIds: [],
+                    flaggedPollingUnits: [],
                 },
             };
         }
-        const [wardResults, listResults] = await Promise.all([
+        const [wardResults, listResults, wardResult] = await Promise.all([
             this.prisma.collationResult.findMany({
                 where: {
                     campaignId: user.campaignId,
@@ -171,6 +173,21 @@ let CollationService = class CollationService {
                         approvedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
                     },
                 }),
+            this.prisma.collationResult.findUnique({
+                where: {
+                    campaignId_level_scopeType_scopeId: {
+                        campaignId: user.campaignId,
+                        level: shared_1.CollationLevel.WARD,
+                        scopeType: shared_1.ScopeType.WARD,
+                        scopeId: user.scopeId,
+                    },
+                },
+                select: {
+                    status: true,
+                    rejectionReason: true,
+                    flaggedPollingUnitIds: true,
+                },
+            }),
         ]);
         const countByStatus = (rows) => {
             let submitted = 0;
@@ -202,6 +219,8 @@ let CollationService = class CollationService {
                 continue;
             rows.push({ status, result, pollingUnit: pu });
         }
+        const flaggedIds = wardResult?.flaggedPollingUnitIds ?? [];
+        const flaggedSet = new Set(flaggedIds);
         const statusOrder = {
             SUBMITTED: 0,
             REJECTED: 1,
@@ -210,6 +229,10 @@ let CollationService = class CollationService {
             APPROVED: 4,
         };
         rows.sort((a, b) => {
+            const aFlagged = flaggedSet.has(a.pollingUnit.id) ? 0 : 1;
+            const bFlagged = flaggedSet.has(b.pollingUnit.id) ? 0 : 1;
+            if (aFlagged !== bFlagged)
+                return aFlagged - bFlagged;
             const orderDiff = (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9);
             if (orderDiff !== 0)
                 return orderDiff;
@@ -217,9 +240,9 @@ let CollationService = class CollationService {
         });
         const total = rows.length;
         const pageRows = rows.slice((page - 1) * limit, page * limit);
-        const data = pageRows.map(({ status, result, pollingUnit }) => {
+        const data = pageRows.map(({ result, pollingUnit }) => {
             if (result) {
-                return { ...result, pollingUnit };
+                return { ...result, pollingUnit, flaggedByLga: flaggedSet.has(pollingUnit.id) };
             }
             return {
                 id: `not-started:${pollingUnit.id}`,
@@ -245,21 +268,18 @@ let CollationService = class CollationService {
                 submittedBy: null,
                 approvedBy: null,
                 pollingUnit,
+                flaggedByLga: flaggedSet.has(pollingUnit.id),
             };
-        });
-        const wardResult = await this.prisma.collationResult.findUnique({
-            where: {
-                campaignId_level_scopeType_scopeId: {
-                    campaignId: user.campaignId,
-                    level: shared_1.CollationLevel.WARD,
-                    scopeType: shared_1.ScopeType.WARD,
-                    scopeId: user.scopeId,
-                },
-            },
-            select: { status: true, rejectionReason: true },
         });
         const returnedByLga = wardResult?.status === shared_1.CollationResultStatus.REJECTED;
         const allPusApproved = statusCounts.totalPus > 0 && statusCounts.approved === statusCounts.totalPus;
+        const flaggedPollingUnits = flaggedIds.length > 0
+            ? await this.prisma.pollingUnit.findMany({
+                where: { id: { in: flaggedIds }, wardId: user.scopeId },
+                select: { id: true, code: true, name: true },
+                orderBy: { code: 'asc' },
+            })
+            : [];
         return {
             data,
             meta: {
@@ -274,6 +294,8 @@ let CollationService = class CollationService {
                 canReturnApprovedPus: returnedByLga,
                 canResubmitToLga: returnedByLga && allPusApproved,
                 rejectionReason: wardResult?.rejectionReason ?? null,
+                flaggedPollingUnitIds: flaggedIds,
+                flaggedPollingUnits,
             },
         };
     }
@@ -607,6 +629,8 @@ let CollationService = class CollationService {
                 approvedById: user.sub,
                 approvedAt: new Date(),
                 approvalComment: dto.comment ?? null,
+                rejectionReason: null,
+                flaggedPollingUnitIds: [],
             },
         });
         await this.writeActionLog({
@@ -641,6 +665,13 @@ let CollationService = class CollationService {
             throw new common_1.BadRequestException('Only submitted results can be rejected');
         }
         await this.verifyApproverScope(user, result);
+        let flaggedPollingUnitIds = [];
+        const isLgaReturningWard = isSubmitted &&
+            result.level === shared_1.CollationLevel.WARD &&
+            (0, shared_1.getCollationLevelForRole)(user.role) === shared_1.CollationLevel.LGA;
+        if (isLgaReturningWard && dto.affectedPollingUnitIds?.length) {
+            flaggedPollingUnitIds = await this.validatePuIdsInWard(result.scopeId, dto.affectedPollingUnitIds);
+        }
         const rejected = await this.prisma.collationResult.update({
             where: { id },
             data: {
@@ -649,6 +680,9 @@ let CollationService = class CollationService {
                 approvedById: user.sub,
                 approvedAt: new Date(),
                 approvalComment: null,
+                ...(isLgaReturningWard
+                    ? { flaggedPollingUnitIds }
+                    : {}),
             },
         });
         await this.writeActionLog({
@@ -664,6 +698,7 @@ let CollationService = class CollationService {
                 scopeType: rejected.scopeType,
                 scopeId: rejected.scopeId,
                 afterLgaReturn: canReturnApprovedAfterLga,
+                affectedPollingUnitIds: flaggedPollingUnitIds,
             },
         });
         if (canReturnApprovedAfterLga) {
@@ -719,6 +754,67 @@ let CollationService = class CollationService {
             });
         }
         return updated;
+    }
+    async returnLgaFlaggedPus(user, dto) {
+        this.assertCollationUser(user);
+        if (user.scopeType !== shared_1.ScopeType.WARD || !user.scopeId) {
+            throw new common_1.ForbiddenException('Only ward officers can return LGA-flagged PUs');
+        }
+        const wardResult = await this.prisma.collationResult.findUnique({
+            where: {
+                campaignId_level_scopeType_scopeId: {
+                    campaignId: user.campaignId,
+                    level: shared_1.CollationLevel.WARD,
+                    scopeType: shared_1.ScopeType.WARD,
+                    scopeId: user.scopeId,
+                },
+            },
+        });
+        if (!wardResult || wardResult.status !== shared_1.CollationResultStatus.REJECTED) {
+            throw new common_1.BadRequestException('LGA must return this ward before bulk-returning flagged PUs');
+        }
+        const flaggedIds = wardResult.flaggedPollingUnitIds ?? [];
+        if (flaggedIds.length === 0) {
+            throw new common_1.BadRequestException('LGA did not flag any polling units on this return');
+        }
+        const reason = dto.reason?.trim() ||
+            wardResult.rejectionReason ||
+            'Returned by ward after LGA flagged this unit for correction';
+        const results = await this.prisma.collationResult.findMany({
+            where: {
+                campaignId: user.campaignId,
+                level: shared_1.CollationLevel.POLLING_UNIT,
+                scopeId: { in: flaggedIds },
+                status: {
+                    in: [shared_1.CollationResultStatus.APPROVED, shared_1.CollationResultStatus.SUBMITTED],
+                },
+            },
+        });
+        let returnedCount = 0;
+        for (const puResult of results) {
+            await this.rejectResult(user, puResult.id, { reason });
+            returnedCount += 1;
+        }
+        return {
+            returnedCount,
+            flaggedCount: flaggedIds.length,
+            reason,
+        };
+    }
+    async validatePuIdsInWard(wardId, puIds) {
+        const unique = [...new Set(puIds.map((id) => id.trim()).filter(Boolean))];
+        if (unique.length === 0)
+            return [];
+        const valid = await this.prisma.pollingUnit.findMany({
+            where: { id: { in: unique }, wardId },
+            select: { id: true },
+        });
+        const validIds = new Set(valid.map((p) => p.id));
+        const invalid = unique.filter((id) => !validIds.has(id));
+        if (invalid.length > 0) {
+            throw new common_1.BadRequestException(`Some polling units are not in this ward: ${invalid.slice(0, 3).join(', ')}${invalid.length > 3 ? '…' : ''}`);
+        }
+        return unique;
     }
     async isWardReturnedByLga(campaignId, pollingUnitId) {
         const pu = await this.prisma.pollingUnit.findUnique({
@@ -783,6 +879,9 @@ let CollationService = class CollationService {
                 : status === shared_1.CollationResultStatus.REJECTED
                     ? (existing?.rejectionReason ?? null)
                     : null;
+        const flaggedPollingUnitIds = status === shared_1.CollationResultStatus.REJECTED
+            ? (existing?.flaggedPollingUnitIds ?? [])
+            : [];
         return this.prisma.collationResult.upsert({
             where: {
                 campaignId_level_scopeType_scopeId: {
@@ -803,6 +902,7 @@ let CollationService = class CollationService {
                 submittedById: options.submittedById,
                 submittedAt: status === shared_1.CollationResultStatus.SUBMITTED ? new Date() : undefined,
                 rejectionReason,
+                flaggedPollingUnitIds,
             },
             update: {
                 ...totals,
@@ -813,6 +913,7 @@ let CollationService = class CollationService {
                     : existing?.submittedById,
                 submittedAt: status === shared_1.CollationResultStatus.SUBMITTED ? new Date() : existing?.submittedAt,
                 rejectionReason,
+                flaggedPollingUnitIds,
                 approvalComment: status === shared_1.CollationResultStatus.SUBMITTED ? null : existing?.approvalComment,
                 approvedById: status === shared_1.CollationResultStatus.SUBMITTED ? null : existing?.approvedById,
                 approvedAt: status === shared_1.CollationResultStatus.SUBMITTED ? null : existing?.approvedAt,

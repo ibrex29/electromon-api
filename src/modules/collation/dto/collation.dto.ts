@@ -49,6 +49,17 @@ export class RejectCollationResultDto {
   @ApiProperty({ example: 'Figures do not match signed EC8A form' })
   @IsString()
   reason: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'Optional: polling unit ids in the ward that LGA believes need correction (LGA → ward return only)',
+    example: ['clxyz…'],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  affectedPollingUnitIds?: string[];
 }
 
 export class ApproveCollationResultDto {

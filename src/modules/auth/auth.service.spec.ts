@@ -38,44 +38,45 @@ describe('AuthService', () => {
 
   describe('validateUser', () => {
     it('returns user when credentials are valid', async () => {
-      prisma.user.findUnique.mockResolvedValue(testUserRecord);
+      prisma.user.findFirst.mockResolvedValue(testUserRecord);
 
-      const user = await service.validateUser('director@electromon.ng', TEST_PASSWORD);
+      const user = await service.validateUser('+2348000000001', TEST_PASSWORD);
 
-      expect(user.email).toBe('director@electromon.ng');
+      expect(user.phoneNumber).toBe('+2348000000001');
     });
 
     it('throws when user is not found', async () => {
-      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.findFirst.mockResolvedValue(null);
 
-      await expect(service.validateUser('missing@example.com', TEST_PASSWORD)).rejects.toThrow(
+      await expect(service.validateUser('+2348999999999', TEST_PASSWORD)).rejects.toThrow(
         UnauthorizedException,
       );
     });
 
     it('throws when password is invalid', async () => {
-      prisma.user.findUnique.mockResolvedValue(testUserRecord);
+      prisma.user.findFirst.mockResolvedValue(testUserRecord);
 
-      await expect(
-        service.validateUser('director@electromon.ng', 'wrong-password'),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(service.validateUser('+2348000000001', 'wrong-password')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 
   describe('login', () => {
     it('returns tokens and user profile on success', async () => {
-      prisma.user.findUnique.mockResolvedValue(testUserRecord);
+      prisma.user.findFirst.mockResolvedValue(testUserRecord);
       prisma.refreshToken.create.mockResolvedValue({ id: 'rt-1' });
       prisma.activityLog.create.mockResolvedValue({ id: 'log-1' });
 
       const result = await service.login({
-        email: 'director@electromon.ng',
+        phoneNumber: '+2348000000001',
         password: TEST_PASSWORD,
       });
 
       expect(result.accessToken).toBe('signed-access-token');
       expect(result.refreshToken).toBeDefined();
       expect(result.user.campaignId).toBe(TEST_CAMPAIGN_ID);
+      expect(result.user.phoneNumber).toBe('+2348000000001');
       expect(jwtService.sign).toHaveBeenCalled();
       expect(prisma.refreshToken.create).toHaveBeenCalled();
     });
