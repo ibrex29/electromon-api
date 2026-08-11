@@ -40,7 +40,7 @@ async function bootstrap() {
   await app.listen(port);
 
   const logger = app.get(Logger);
-  logger.log(`Electromon API running on http://localhost:${port}`);
+  logger.log(`Dan-Modi API running on http://localhost:${port}`);
   logger.log(`Swagger docs at http://localhost:${port}/docs`);
   logger.log(`Metrics at http://localhost:${port}/api/v1/metrics`);
 }

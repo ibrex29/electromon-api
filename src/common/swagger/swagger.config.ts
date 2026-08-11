@@ -4,14 +4,13 @@ export const SWAGGER_BEARER_AUTH = 'access-token';
 
 export function buildSwaggerDocument() {
   return new DocumentBuilder()
-    .setTitle('Electromon API')
+    .setTitle('Dan-Modi API')
     .setDescription(
       [
-        '**Electromon** — Campaign Management & Election Intelligence Platform.',
+        '**Dan-Modi** — Campaign command & real-time result monitoring.',
         '',
-        'REST API for managing Nigerian political campaigns: authentication,',
-        'geographic structure, support groups, volunteers, field reporting,',
-        'and election-day operations.',
+        'REST API for campaign operations: authentication, geographic structure,',
+        'support groups, volunteers, field reporting, and election-day collation.',
         '',
         '### Authentication',
         '1. Call `POST /auth/login` with phone number and password',
@@ -20,7 +19,7 @@ export function buildSwaggerDocument() {
       ].join('\n'),
     )
     .setVersion('0.1.0')
-    .setContact('Electromon Team', 'https://electromon.ng', 'support@electromon.ng')
+    .setContact('Dan-Modi Campaign', '', 'support@electromon.ng')
     .addServer('http://localhost:3001', 'Local development')
     .addBearerAuth(
       {
@@ -54,7 +53,7 @@ export const swaggerCustomOptions: SwaggerCustomOptions = {
     filter: true,
     showRequestDuration: true,
   },
-  customSiteTitle: 'Electromon API Docs',
+  customSiteTitle: 'Dan-Modi API Docs',
   customfavIcon: '/favicon.ico',
   jsonDocumentUrl: 'docs/json',
 };
