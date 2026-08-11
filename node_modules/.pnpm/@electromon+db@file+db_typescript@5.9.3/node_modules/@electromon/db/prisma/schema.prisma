@@ -54,6 +54,12 @@ enum CollationResultStatus {
   REJECTED
 }
 
+enum CollationActionType {
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
 enum SupportGroupCategory {
   YOUTH
   WOMEN
@@ -167,6 +173,7 @@ model User {
   situationUpdates         SituationUpdate[]
   collationResultsSubmitted CollationResult[] @relation("CollationSubmitted")
   collationResultsApproved  CollationResult[] @relation("CollationApproved")
+  collationActions          CollationActionLog[] @relation("CollationActionActor")
 
   @@index([email])
   @@index([phoneNumber])
@@ -229,6 +236,7 @@ model Campaign {
   fieldReports     FieldReport[]
   activityLogs     ActivityLog[]
   collationResults CollationResult[]
+  collationActions CollationActionLog[]
 
   @@index([stateId])
   @@map("campaigns")
@@ -583,10 +591,34 @@ model CollationResult {
   approvedBy  User?             @relation("CollationApproved", fields: [approvedById], references: [id])
   parent      CollationResult?  @relation("CollationChain", fields: [parentResultId], references: [id])
   children    CollationResult[] @relation("CollationChain")
+  actionLogs  CollationActionLog[]
 
   @@unique([campaignId, level, scopeType, scopeId])
   @@index([campaignId, level, status])
   @@index([scopeType, scopeId])
   @@index([parentResultId])
   @@map("collation_results")
+}
+
+/// Append-only audit trail for collation approve / reject / submit events.
+model CollationActionLog {
+  id                String              @id @default(cuid())
+  campaignId        String
+  collationResultId String
+  action            CollationActionType
+  actorId           String
+  fromStatus        CollationResultStatus?
+  toStatus          CollationResultStatus
+  comment           String?
+  metadata          Json?
+  createdAt         DateTime            @default(now())
+
+  campaign        Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  collationResult CollationResult @relation(fields: [collationResultId], references: [id], onDelete: Cascade)
+  actor           User            @relation("CollationActionActor", fields: [actorId], references: [id])
+
+  @@index([collationResultId, createdAt])
+  @@index([campaignId, createdAt])
+  @@index([actorId])
+  @@map("collation_action_logs")
 }

@@ -125,7 +125,7 @@ export class CollationService {
       page?: number;
       limit?: number;
       search?: string;
-      status?: CollationResultStatus;
+      status?: CollationResultStatus | 'NOT_STARTED';
     } = {},
   ) {
     this.assertCollationUser(user);
@@ -136,82 +136,195 @@ export class CollationService {
     const page = Math.max(1, options.page ?? 1);
     const limit = Math.min(50, Math.max(1, options.limit ?? 10));
     const search = options.search?.trim();
+    const statusFilter = options.status;
 
-    const puWhere: Prisma.PollingUnitWhereInput = {
-      wardId: user.scopeId,
-      ...(search
-        ? {
-            OR: [
-              { name: { contains: search, mode: Prisma.QueryMode.insensitive } },
-              { code: { contains: search, mode: Prisma.QueryMode.insensitive } },
-            ],
-          }
-        : {}),
-    };
-
-    const matchingPus = await this.prisma.pollingUnit.findMany({
-      where: puWhere,
-      select: { id: true },
+    const allPus = await this.prisma.pollingUnit.findMany({
+      where: {
+        wardId: user.scopeId,
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: search, mode: Prisma.QueryMode.insensitive } },
+                { code: { contains: search, mode: Prisma.QueryMode.insensitive } },
+              ],
+            }
+          : {}),
+      },
+      select: { id: true, code: true, name: true, wardId: true },
+      orderBy: { code: 'asc' },
     });
-    const puIds = matchingPus.map((pu) => pu.id);
+    const allPuIds = allPus.map((pu) => pu.id);
 
-    const visibleStatuses = [
-      CollationResultStatus.SUBMITTED,
-      CollationResultStatus.APPROVED,
-      CollationResultStatus.REJECTED,
-    ];
+    // Full-ward counts (ignore list search) for summary cards
+    const wardAllPus = search
+      ? await this.prisma.pollingUnit.findMany({
+          where: { wardId: user.scopeId },
+          select: { id: true },
+        })
+      : allPus;
+    const wardPuIds = wardAllPus.map((pu) => pu.id);
+    const totalPus = wardPuIds.length;
 
-    const baseWhere: Prisma.CollationResultWhereInput = {
-      campaignId: user.campaignId,
-      level: CollationLevel.POLLING_UNIT,
-      scopeId: { in: puIds },
+    const emptyCounts = {
+      submitted: 0,
+      approved: 0,
+      rejected: 0,
+      draft: 0,
+      notStarted: 0,
+      totalPus,
     };
 
-    const where: Prisma.CollationResultWhereInput = {
-      ...baseWhere,
-      status: options.status ?? { in: visibleStatuses },
-    };
-
-    if (puIds.length === 0) {
+    if (wardPuIds.length === 0 && allPuIds.length === 0) {
       return {
         data: [],
         meta: { page, limit, total: 0, totalPages: 0 },
-        statusCounts: { submitted: 0, approved: 0, rejected: 0 },
+        statusCounts: emptyCounts,
+        wardMeta: {
+          returnedByLga: false,
+          canReturnApprovedPus: false,
+          canResubmitToLga: false,
+          rejectionReason: null,
+        },
       };
     }
 
-    const [total, results, submitted, approved, rejected] = await Promise.all([
-      this.prisma.collationResult.count({ where }),
+    const [wardResults, listResults] = await Promise.all([
       this.prisma.collationResult.findMany({
-        where,
-        orderBy: [{ submittedAt: { sort: 'desc', nulls: 'last' } }, { updatedAt: 'desc' }],
-        skip: (page - 1) * limit,
-        take: limit,
-        include: {
-          submittedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
-          approvedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+        where: {
+          campaignId: user.campaignId,
+          level: CollationLevel.POLLING_UNIT,
+          scopeId: { in: wardPuIds },
         },
+        select: { scopeId: true, status: true },
       }),
-      this.prisma.collationResult.count({
-        where: { ...baseWhere, status: CollationResultStatus.SUBMITTED },
-      }),
-      this.prisma.collationResult.count({
-        where: { ...baseWhere, status: CollationResultStatus.APPROVED },
-      }),
-      this.prisma.collationResult.count({
-        where: { ...baseWhere, status: CollationResultStatus.REJECTED },
-      }),
+      allPuIds.length === 0
+        ? Promise.resolve([])
+        : this.prisma.collationResult.findMany({
+            where: {
+              campaignId: user.campaignId,
+              level: CollationLevel.POLLING_UNIT,
+              scopeId: { in: allPuIds },
+            },
+            include: {
+              submittedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+              approvedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+            },
+          }),
     ]);
 
+    const countByStatus = (rows: { status: string }[]) => {
+      let submitted = 0;
+      let approved = 0;
+      let rejected = 0;
+      let draft = 0;
+      for (const row of rows) {
+        if (row.status === 'SUBMITTED') submitted += 1;
+        else if (row.status === 'APPROVED') approved += 1;
+        else if (row.status === 'REJECTED') rejected += 1;
+        else if (row.status === 'DRAFT') draft += 1;
+      }
+      const notStarted = Math.max(0, totalPus - submitted - approved - rejected - draft);
+      return { submitted, approved, rejected, draft, notStarted, totalPus };
+    };
+
+    const statusCounts = countByStatus(wardResults);
+
+    type RowStatus = CollationResultStatus | 'NOT_STARTED';
+    const resultByPu = new Map(listResults.map((r) => [r.scopeId, r]));
+
+    const rows: Array<{
+      status: RowStatus;
+      result: (typeof listResults)[number] | null;
+      pollingUnit: (typeof allPus)[number];
+    }> = [];
+
+    for (const pu of allPus) {
+      const result = resultByPu.get(pu.id) ?? null;
+      const status: RowStatus = result
+        ? (result.status as CollationResultStatus)
+        : 'NOT_STARTED';
+      if (statusFilter && status !== statusFilter) continue;
+      rows.push({ status, result, pollingUnit: pu });
+    }
+
+    // Prefer actionable statuses first when showing full list
+    const statusOrder: Record<string, number> = {
+      SUBMITTED: 0,
+      REJECTED: 1,
+      DRAFT: 2,
+      NOT_STARTED: 3,
+      APPROVED: 4,
+    };
+    rows.sort((a, b) => {
+      const orderDiff = (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9);
+      if (orderDiff !== 0) return orderDiff;
+      return a.pollingUnit.code.localeCompare(b.pollingUnit.code);
+    });
+
+    const total = rows.length;
+    const pageRows = rows.slice((page - 1) * limit, page * limit);
+
+    const data = pageRows.map(({ status, result, pollingUnit }) => {
+      if (result) {
+        return { ...result, pollingUnit };
+      }
+      return {
+        id: `not-started:${pollingUnit.id}`,
+        campaignId: user.campaignId!,
+        level: CollationLevel.POLLING_UNIT,
+        scopeType: ScopeType.POLLING_UNIT,
+        scopeId: pollingUnit.id,
+        registeredVoters: null,
+        accreditedVoters: null,
+        votesCast: null,
+        partyResults: null,
+        ec8aPhotoUrls: [] as string[],
+        approvalComment: null,
+        status: 'NOT_STARTED' as const,
+        submittedById: null,
+        submittedAt: null,
+        approvedById: null,
+        approvedAt: null,
+        rejectionReason: null,
+        parentResultId: null,
+        createdAt: null,
+        updatedAt: null,
+        submittedBy: null,
+        approvedBy: null,
+        pollingUnit,
+      };
+    });
+
+    const wardResult = await this.prisma.collationResult.findUnique({
+      where: {
+        campaignId_level_scopeType_scopeId: {
+          campaignId: user.campaignId!,
+          level: CollationLevel.WARD,
+          scopeType: ScopeType.WARD,
+          scopeId: user.scopeId,
+        },
+      },
+      select: { status: true, rejectionReason: true },
+    });
+    const returnedByLga = wardResult?.status === CollationResultStatus.REJECTED;
+    const allPusApproved =
+      statusCounts.totalPus > 0 && statusCounts.approved === statusCounts.totalPus;
+
     return {
-      data: await this.enrichPuResults(results),
+      data,
       meta: {
         page,
         limit,
         total,
         totalPages: total === 0 ? 0 : Math.ceil(total / limit),
       },
-      statusCounts: { submitted, approved, rejected },
+      statusCounts,
+      wardMeta: {
+        returnedByLga,
+        canReturnApprovedPus: returnedByLga,
+        canResubmitToLga: returnedByLga && allPusApproved,
+        rejectionReason: wardResult?.rejectionReason ?? null,
+      },
     };
   }
 
@@ -227,7 +340,7 @@ export class CollationService {
       CollationLevel.WARD,
     );
 
-    return this.enrichWardResults(
+    const results = await this.enrichWardResults(
       await this.prisma.collationResult.findMany({
         where: {
           campaignId: user.campaignId,
@@ -248,6 +361,20 @@ export class CollationService {
         },
       }),
     );
+
+    const readinessByWard = await this.getWardPuReadinessMap(user.campaignId!, wardIds);
+
+    return results.map((result) => ({
+      ...result,
+      puReadiness: readinessByWard.get(result.scopeId) ?? {
+        totalPus: 0,
+        approvedPus: 0,
+        submittedPus: 0,
+        rejectedPus: 0,
+        missingPus: 0,
+        readyForLgaApproval: false,
+      },
+    }));
   }
 
   async listLgaWardPuResults(user: JwtPayload, wardId: string) {
@@ -353,16 +480,39 @@ export class CollationService {
       throw new BadRequestException('No ward results are awaiting approval');
     }
 
+    for (const result of pending) {
+      await this.assertAllPollingUnitsApprovedInWard(user.campaignId!, result.scopeId);
+    }
+
     const approvedAt = new Date();
-    await this.prisma.collationResult.updateMany({
-      where: { id: { in: pending.map((r) => r.id) } },
-      data: {
-        status: CollationResultStatus.APPROVED,
-        approvedById: user.sub,
-        approvedAt,
-        approvalComment: dto.comment ?? null,
-      },
-    });
+    await this.prisma.$transaction([
+      this.prisma.collationResult.updateMany({
+        where: { id: { in: pending.map((r) => r.id) } },
+        data: {
+          status: CollationResultStatus.APPROVED,
+          approvedById: user.sub,
+          approvedAt,
+          approvalComment: dto.comment ?? null,
+        },
+      }),
+      this.prisma.collationActionLog.createMany({
+        data: pending.map((result) => ({
+          campaignId: result.campaignId,
+          collationResultId: result.id,
+          action: 'APPROVED',
+          actorId: user.sub,
+          fromStatus: CollationResultStatus.SUBMITTED,
+          toStatus: CollationResultStatus.APPROVED,
+          comment: dto.comment ?? null,
+          metadata: {
+            bulk: true,
+            level: result.level,
+            scopeType: result.scopeType,
+            scopeId: result.scopeId,
+          },
+        })),
+      }),
+    ]);
 
     await this.rollupToParent(
       user.campaignId!,
@@ -544,7 +694,9 @@ export class CollationService {
       );
     }
 
-    return this.prisma.collationResult.update({
+    const fromStatus = result.status as CollationResultStatus;
+
+    const submitted = await this.prisma.collationResult.update({
       where: { id },
       data: {
         status: CollationResultStatus.SUBMITTED,
@@ -553,6 +705,22 @@ export class CollationService {
         rejectionReason: null,
       },
     });
+
+    await this.writeActionLog({
+      campaignId: submitted.campaignId,
+      collationResultId: submitted.id,
+      action: 'SUBMITTED',
+      actorId: user.sub,
+      fromStatus,
+      toStatus: CollationResultStatus.SUBMITTED,
+      metadata: {
+        level: submitted.level,
+        scopeType: submitted.scopeType,
+        scopeId: submitted.scopeId,
+      },
+    });
+
+    return submitted;
   }
 
   async approveResult(user: JwtPayload, id: string, dto: ApproveCollationResultDto = {}) {
@@ -573,6 +741,10 @@ export class CollationService {
 
     await this.verifyApproverScope(user, result);
 
+    if (result.level === CollationLevel.WARD) {
+      await this.assertAllPollingUnitsApprovedInWard(user.campaignId!, result.scopeId);
+    }
+
     const approved = await this.prisma.collationResult.update({
       where: { id },
       data: {
@@ -580,6 +752,21 @@ export class CollationService {
         approvedById: user.sub,
         approvedAt: new Date(),
         approvalComment: dto.comment ?? null,
+      },
+    });
+
+    await this.writeActionLog({
+      campaignId: approved.campaignId,
+      collationResultId: approved.id,
+      action: 'APPROVED',
+      actorId: user.sub,
+      fromStatus: CollationResultStatus.SUBMITTED,
+      toStatus: CollationResultStatus.APPROVED,
+      comment: dto.comment ?? null,
+      metadata: {
+        level: approved.level,
+        scopeType: approved.scopeType,
+        scopeId: approved.scopeId,
       },
     });
 
@@ -598,20 +785,388 @@ export class CollationService {
   async rejectResult(user: JwtPayload, id: string, dto: RejectCollationResultDto) {
     this.assertCollationUser(user);
     const result = await this.prisma.collationResult.findUniqueOrThrow({ where: { id } });
+    const fromStatus = result.status as CollationResultStatus;
 
-    if (result.status !== CollationResultStatus.SUBMITTED) {
+    // Standard path: return a submitted subordinate result
+    // LGA-return recovery path: ward may re-return already-approved PUs while the ward rollup is REJECTED
+    const isSubmitted = fromStatus === CollationResultStatus.SUBMITTED;
+    const canReturnApprovedAfterLga =
+      fromStatus === CollationResultStatus.APPROVED &&
+      result.level === CollationLevel.POLLING_UNIT &&
+      (await this.isWardReturnedByLga(result.campaignId, result.scopeId));
+
+    if (!isSubmitted && !canReturnApprovedAfterLga) {
+      if (fromStatus === CollationResultStatus.APPROVED) {
+        throw new BadRequestException(
+          'Approved PUs can only be returned after LGA has returned your ward rollup for correction',
+        );
+      }
       throw new BadRequestException('Only submitted results can be rejected');
     }
 
     await this.verifyApproverScope(user, result);
 
-    return this.prisma.collationResult.update({
+    const rejected = await this.prisma.collationResult.update({
       where: { id },
       data: {
         status: CollationResultStatus.REJECTED,
         rejectionReason: dto.reason,
         approvedById: user.sub,
         approvedAt: new Date(),
+        approvalComment: null,
+      },
+    });
+
+    await this.writeActionLog({
+      campaignId: rejected.campaignId,
+      collationResultId: rejected.id,
+      action: 'REJECTED',
+      actorId: user.sub,
+      fromStatus,
+      toStatus: CollationResultStatus.REJECTED,
+      comment: dto.reason,
+      metadata: {
+        level: rejected.level,
+        scopeType: rejected.scopeType,
+        scopeId: rejected.scopeId,
+        afterLgaReturn: canReturnApprovedAfterLga,
+      },
+    });
+
+    // Pull returned PU out of the ward rollup totals (keep ward REJECTED — do not re-forward)
+    if (canReturnApprovedAfterLga) {
+      await this.rebuildWardRollupAfterPuChange(user.campaignId!, user.scopeId!, {
+        keepRejected: true,
+        rejectionReasonPreserved: true,
+        submittedById: user.sub,
+      });
+    }
+
+    return rejected;
+  }
+
+  /**
+   * After LGA returns a ward: re-forward ward totals once every PU is APPROVED again
+   * (or still approved), without requiring a manual PU re-approve cycle.
+   */
+  async resubmitWardToLga(user: JwtPayload) {
+    this.assertCollationUser(user);
+    if (user.scopeType !== ScopeType.WARD || !user.scopeId) {
+      throw new ForbiddenException('Only ward officers can resubmit a ward rollup to LGA');
+    }
+
+    const level = getCollationLevelForRole(user.role as CampaignRole);
+    if (level !== CollationLevel.WARD) {
+      throw new ForbiddenException('Only ward officers can resubmit a ward rollup to LGA');
+    }
+
+    const wardResult = await this.prisma.collationResult.findUnique({
+      where: {
+        campaignId_level_scopeType_scopeId: {
+          campaignId: user.campaignId!,
+          level: CollationLevel.WARD,
+          scopeType: ScopeType.WARD,
+          scopeId: user.scopeId,
+        },
+      },
+    });
+
+    if (!wardResult) {
+      throw new BadRequestException('No ward rollup exists yet. Approve PU results first.');
+    }
+    if (wardResult.status !== CollationResultStatus.REJECTED) {
+      throw new BadRequestException('Ward rollup can only be re-submitted after LGA has returned it');
+    }
+
+    await this.assertAllPollingUnitsApprovedInWard(user.campaignId!, user.scopeId);
+
+    const updated = await this.rebuildWardRollupAfterPuChange(user.campaignId!, user.scopeId, {
+      forceSubmit: true,
+      submittedById: user.sub,
+      clearRejection: true,
+    });
+
+    if (updated) {
+      await this.writeActionLog({
+        campaignId: updated.campaignId,
+        collationResultId: updated.id,
+        action: 'SUBMITTED',
+        actorId: user.sub,
+        fromStatus: CollationResultStatus.REJECTED,
+        toStatus: CollationResultStatus.SUBMITTED,
+        comment: 'Re-submitted to LGA after reviewing ward totals',
+        metadata: { level: updated.level, scopeType: updated.scopeType, scopeId: updated.scopeId },
+      });
+    }
+
+    return updated;
+  }
+
+  private async isWardReturnedByLga(campaignId: string, pollingUnitId: string): Promise<boolean> {
+    const pu = await this.prisma.pollingUnit.findUnique({
+      where: { id: pollingUnitId },
+      select: { wardId: true },
+    });
+    if (!pu?.wardId) return false;
+
+    const wardResult = await this.prisma.collationResult.findUnique({
+      where: {
+        campaignId_level_scopeType_scopeId: {
+          campaignId,
+          level: CollationLevel.WARD,
+          scopeType: ScopeType.WARD,
+          scopeId: pu.wardId,
+        },
+      },
+      select: { status: true },
+    });
+
+    return wardResult?.status === CollationResultStatus.REJECTED;
+  }
+
+  /**
+   * Rebuild ward totals from currently APPROVED PUs.
+   * - forceSubmit: set SUBMITTED (resend to LGA)
+   * - keepRejected: remain REJECTED with refreshed totals
+   */
+  private async rebuildWardRollupAfterPuChange(
+    campaignId: string,
+    wardId: string,
+    options: {
+      forceSubmit?: boolean;
+      keepRejected?: boolean;
+      clearRejection?: boolean;
+      rejectionReasonPreserved?: boolean;
+      submittedById?: string;
+    } = {},
+  ) {
+    const existing = await this.prisma.collationResult.findUnique({
+      where: {
+        campaignId_level_scopeType_scopeId: {
+          campaignId,
+          level: CollationLevel.WARD,
+          scopeType: ScopeType.WARD,
+          scopeId: wardId,
+        },
+      },
+    });
+
+    const puIds = await this.getChildScopeIds(ScopeType.WARD, wardId, CollationLevel.POLLING_UNIT);
+    const approvedChildren = await this.prisma.collationResult.findMany({
+      where: {
+        campaignId,
+        level: CollationLevel.POLLING_UNIT,
+        scopeId: { in: puIds },
+        status: CollationResultStatus.APPROVED,
+      },
+    });
+
+    const totals = approvedChildren.reduce(
+      (acc, r) => ({
+        registeredVoters: (acc.registeredVoters ?? 0) + (r.registeredVoters ?? 0),
+        accreditedVoters: (acc.accreditedVoters ?? 0) + (r.accreditedVoters ?? 0),
+        votesCast: (acc.votesCast ?? 0) + (r.votesCast ?? 0),
+      }),
+      { registeredVoters: 0, accreditedVoters: 0, votesCast: 0 },
+    );
+    const partyResults = this.aggregatePartyResults(approvedChildren);
+
+    let status: CollationResultStatus;
+    if (options.forceSubmit) {
+      status = CollationResultStatus.SUBMITTED;
+    } else if (options.keepRejected || existing?.status === CollationResultStatus.REJECTED) {
+      status = CollationResultStatus.REJECTED;
+    } else {
+      status = CollationResultStatus.SUBMITTED;
+    }
+
+    const rejectionReason =
+      options.clearRejection
+        ? null
+        : options.rejectionReasonPreserved
+          ? (existing?.rejectionReason ?? null)
+          : status === CollationResultStatus.REJECTED
+            ? (existing?.rejectionReason ?? null)
+            : null;
+
+    return this.prisma.collationResult.upsert({
+      where: {
+        campaignId_level_scopeType_scopeId: {
+          campaignId,
+          level: CollationLevel.WARD,
+          scopeType: ScopeType.WARD,
+          scopeId: wardId,
+        },
+      },
+      create: {
+        campaignId,
+        level: CollationLevel.WARD,
+        scopeType: ScopeType.WARD,
+        scopeId: wardId,
+        ...totals,
+        partyResults,
+        status,
+        submittedById: options.submittedById,
+        submittedAt: status === CollationResultStatus.SUBMITTED ? new Date() : undefined,
+        rejectionReason,
+      },
+      update: {
+        ...totals,
+        partyResults,
+        status,
+        submittedById:
+          status === CollationResultStatus.SUBMITTED
+            ? (options.submittedById ?? existing?.submittedById)
+            : existing?.submittedById,
+        submittedAt: status === CollationResultStatus.SUBMITTED ? new Date() : existing?.submittedAt,
+        rejectionReason,
+        approvalComment: status === CollationResultStatus.SUBMITTED ? null : existing?.approvalComment,
+        approvedById: status === CollationResultStatus.SUBMITTED ? null : existing?.approvedById,
+        approvedAt: status === CollationResultStatus.SUBMITTED ? null : existing?.approvedAt,
+      },
+    });
+  }
+
+  async listActionLogs(user: JwtPayload, resultId: string) {
+    this.assertCollationUser(user);
+
+    const result = await this.prisma.collationResult.findUnique({ where: { id: resultId } });
+    if (!result) throw new NotFoundException('Collation result not found');
+    if (result.campaignId !== user.campaignId) {
+      throw new ForbiddenException('Result is outside your campaign');
+    }
+
+    // Approvers may view logs for results they can act on (or already acted on).
+    // Submitters may view logs for their own scope results.
+    const ownLevel = getCollationLevelForRole(user.role as CampaignRole)!;
+    const canViewOwn =
+      result.level === ownLevel &&
+      result.scopeType === user.scopeType &&
+      result.scopeId === user.scopeId;
+
+    if (!canViewOwn) {
+      await this.verifyApproverScope(user, result);
+    }
+
+    return this.prisma.collationActionLog.findMany({
+      where: { collationResultId: resultId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        actor: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
+    });
+  }
+
+  private async getWardPuReadinessMap(campaignId: string, wardIds: string[]) {
+    const map = new Map<
+      string,
+      {
+        totalPus: number;
+        approvedPus: number;
+        submittedPus: number;
+        rejectedPus: number;
+        missingPus: number;
+        readyForLgaApproval: boolean;
+      }
+    >();
+
+    if (wardIds.length === 0) return map;
+
+    const pus = await this.prisma.pollingUnit.findMany({
+      where: { wardId: { in: wardIds } },
+      select: { id: true, wardId: true },
+    });
+
+    const puIds = pus.map((pu) => pu.id);
+    const results = puIds.length
+      ? await this.prisma.collationResult.findMany({
+          where: {
+            campaignId,
+            level: CollationLevel.POLLING_UNIT,
+            scopeId: { in: puIds },
+          },
+          select: { scopeId: true, status: true },
+        })
+      : [];
+
+    const resultByPu = new Map(results.map((r) => [r.scopeId, r.status]));
+    const pusByWard = new Map<string, string[]>();
+    for (const pu of pus) {
+      const list = pusByWard.get(pu.wardId) ?? [];
+      list.push(pu.id);
+      pusByWard.set(pu.wardId, list);
+    }
+
+    for (const wardId of wardIds) {
+      const wardPuIds = pusByWard.get(wardId) ?? [];
+      let approvedPus = 0;
+      let submittedPus = 0;
+      let rejectedPus = 0;
+      let missingPus = 0;
+
+      for (const puId of wardPuIds) {
+        const status = resultByPu.get(puId);
+        if (!status) {
+          missingPus += 1;
+          continue;
+        }
+        if (status === CollationResultStatus.APPROVED) approvedPus += 1;
+        else if (status === CollationResultStatus.SUBMITTED) submittedPus += 1;
+        else if (status === CollationResultStatus.REJECTED) rejectedPus += 1;
+        else missingPus += 1; // DRAFT counts as not ready
+      }
+
+      const totalPus = wardPuIds.length;
+      map.set(wardId, {
+        totalPus,
+        approvedPus,
+        submittedPus,
+        rejectedPus,
+        missingPus,
+        readyForLgaApproval: totalPus > 0 && approvedPus === totalPus,
+      });
+    }
+
+    return map;
+  }
+
+  private async assertAllPollingUnitsApprovedInWard(campaignId: string, wardId: string) {
+    const readiness = (await this.getWardPuReadinessMap(campaignId, [wardId])).get(wardId);
+    if (!readiness) {
+      throw new BadRequestException('Ward polling units could not be verified');
+    }
+    if (!readiness.readyForLgaApproval) {
+      throw new BadRequestException(
+        `Cannot approve this ward until every polling unit is approved. ` +
+          `${readiness.approvedPus} of ${readiness.totalPus} PUs approved` +
+          (readiness.submittedPus ? `, ${readiness.submittedPus} awaiting ward approval` : '') +
+          (readiness.rejectedPus ? `, ${readiness.rejectedPus} returned` : '') +
+          (readiness.missingPus ? `, ${readiness.missingPus} not yet submitted` : '') +
+          '.',
+      );
+    }
+  }
+
+  private async writeActionLog(input: {
+    campaignId: string;
+    collationResultId: string;
+    action: 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+    actorId: string;
+    fromStatus?: CollationResultStatus | null;
+    toStatus: CollationResultStatus;
+    comment?: string | null;
+    metadata?: Prisma.InputJsonValue;
+  }) {
+    return this.prisma.collationActionLog.create({
+      data: {
+        campaignId: input.campaignId,
+        collationResultId: input.collationResultId,
+        action: input.action,
+        actorId: input.actorId,
+        fromStatus: input.fromStatus ?? null,
+        toStatus: input.toStatus,
+        comment: input.comment ?? null,
+        metadata: input.metadata ?? undefined,
       },
     });
   }

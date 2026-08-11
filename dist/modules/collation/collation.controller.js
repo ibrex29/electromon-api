@@ -78,6 +78,9 @@ let CollationController = class CollationController {
             status,
         });
     }
+    resubmitWardToLga(user) {
+        return this.collationService.resubmitWardToLga(user);
+    }
     upsertResult(user, dto) {
         return this.collationService.upsertResult(user, dto);
     }
@@ -92,6 +95,9 @@ let CollationController = class CollationController {
     }
     rejectResult(user, id, dto) {
         return this.collationService.rejectResult(user, id, dto);
+    }
+    listActionLogs(user, id) {
+        return this.collationService.listActionLogs(user, id);
     }
 };
 exports.CollationController = CollationController;
@@ -224,7 +230,7 @@ __decorate([
     (0, common_1.Get)('lga/ward-submissions'),
     (0, auth_decorators_1.Roles)(shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COORDINATOR),
     (0, swagger_1.ApiOperation)({ summary: 'Ward collation submissions in the LGA officer scope' }),
-    openapi.ApiResponse({ status: 200, type: [Object] }),
+    openapi.ApiResponse({ status: 200 }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -270,7 +276,11 @@ __decorate([
     (0, swagger_1.ApiQuery)({ name: 'page', required: false, type: Number }),
     (0, swagger_1.ApiQuery)({ name: 'limit', required: false, type: Number }),
     (0, swagger_1.ApiQuery)({ name: 'search', required: false, type: String }),
-    (0, swagger_1.ApiQuery)({ name: 'status', required: false, enum: shared_1.CollationResultStatus }),
+    (0, swagger_1.ApiQuery)({
+        name: 'status',
+        required: false,
+        enum: ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'NOT_STARTED'],
+    }),
     openapi.ApiResponse({ status: 200 }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Query)('page')),
@@ -281,6 +291,18 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], CollationController.prototype, "listWardPuSubmissions", null);
+__decorate([
+    (0, common_1.Patch)('ward/resubmit-to-lga'),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.WARD_RA_OFFICER),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Re-forward ward rollup to LGA after LGA return (requires every PU in the ward approved)',
+    }),
+    openapi.ApiResponse({ status: 200 }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], CollationController.prototype, "resubmitWardToLga", null);
 __decorate([
     (0, common_1.Post)('results'),
     (0, auth_decorators_1.Roles)(...shared_1.COLLATION_ROLES),
@@ -330,7 +352,9 @@ __decorate([
 __decorate([
     (0, common_1.Patch)('results/:id/reject'),
     (0, auth_decorators_1.Roles)(shared_1.CampaignRole.WARD_RA_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.NATIONAL_COLLATION_OFFICER),
-    (0, swagger_1.ApiOperation)({ summary: 'Reject a submitted result from the level below' }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Reject / return a result from the level below. Ward officers may also return APPROVED PUs while the ward rollup is returned by LGA.',
+    }),
     openapi.ApiResponse({ status: 200 }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Param)('id')),
@@ -339,6 +363,17 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, collation_dto_1.RejectCollationResultDto]),
     __metadata("design:returntype", void 0)
 ], CollationController.prototype, "rejectResult", null);
+__decorate([
+    (0, common_1.Get)('results/:id/action-logs'),
+    (0, auth_decorators_1.Roles)(...shared_1.COLLATION_ROLES),
+    (0, swagger_1.ApiOperation)({ summary: 'Action log for submit / approve / reject on a collation result' }),
+    openapi.ApiResponse({ status: 200, type: [Object] }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], CollationController.prototype, "listActionLogs", null);
 exports.CollationController = CollationController = __decorate([
     (0, swagger_1.ApiTags)('collation'),
     (0, swagger_1.ApiBearerAuth)(swagger_config_1.SWAGGER_BEARER_AUTH),

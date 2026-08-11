@@ -201,13 +201,17 @@ export class CollationController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
-  @ApiQuery({ name: 'status', required: false, enum: CollationResultStatus })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'NOT_STARTED'],
+  })
   listWardPuSubmissions(
     @CurrentUser() user: JwtPayload,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
-    @Query('status') status?: CollationResultStatus,
+    @Query('status') status?: CollationResultStatus | 'NOT_STARTED',
   ) {
     return this.collationService.listWardPuSubmissions(user, {
       page: page ? parseInt(page, 10) : undefined,
@@ -215,6 +219,16 @@ export class CollationController {
       search,
       status,
     });
+  }
+
+  @Patch('ward/resubmit-to-lga')
+  @Roles(CampaignRole.WARD_RA_OFFICER)
+  @ApiOperation({
+    summary:
+      'Re-forward ward rollup to LGA after LGA return (requires every PU in the ward approved)',
+  })
+  resubmitWardToLga(@CurrentUser() user: JwtPayload) {
+    return this.collationService.resubmitWardToLga(user);
   }
 
   @Post('results')
@@ -265,12 +279,22 @@ export class CollationController {
     CampaignRole.STATE_COLLATION_OFFICER,
     CampaignRole.NATIONAL_COLLATION_OFFICER,
   )
-  @ApiOperation({ summary: 'Reject a submitted result from the level below' })
+  @ApiOperation({
+    summary:
+      'Reject / return a result from the level below. Ward officers may also return APPROVED PUs while the ward rollup is returned by LGA.',
+  })
   rejectResult(
     @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
     @Body() dto: RejectCollationResultDto,
   ) {
     return this.collationService.rejectResult(user, id, dto);
+  }
+
+  @Get('results/:id/action-logs')
+  @Roles(...COLLATION_ROLES)
+  @ApiOperation({ summary: 'Action log for submit / approve / reject on a collation result' })
+  listActionLogs(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.collationService.listActionLogs(user, id);
   }
 }

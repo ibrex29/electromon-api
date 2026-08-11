@@ -1,4 +1,4 @@
-import { CollationResultStatus, JwtPayload } from '@electromon/shared';
+import { CollationLevel, CollationResultStatus, JwtPayload, ScopeType } from '@electromon/shared';
 import { Prisma } from '@electromon/db';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ScopeResolverService } from '../../common/collation/scope-resolver.service';
@@ -101,11 +101,11 @@ export declare class CollationService {
         pendingApprovals: number;
         myResult: {
             id: string;
-            createdAt: Date;
-            campaignId: string;
             status: import("@electromon/db").$Enums.CollationResultStatus;
-            level: import("@electromon/db").$Enums.CollationLevel;
+            createdAt: Date;
             updatedAt: Date;
+            campaignId: string;
+            level: import("@electromon/db").$Enums.CollationLevel;
             scopeType: import("@electromon/db").$Enums.ScopeType;
             scopeId: string;
             registeredVoters: number | null;
@@ -137,11 +137,11 @@ export declare class CollationService {
         } | null;
     } & {
         id: string;
-        createdAt: Date;
-        campaignId: string;
         status: import("@electromon/db").$Enums.CollationResultStatus;
-        level: import("@electromon/db").$Enums.CollationLevel;
+        createdAt: Date;
         updatedAt: Date;
+        campaignId: string;
+        level: import("@electromon/db").$Enums.CollationLevel;
         scopeType: import("@electromon/db").$Enums.ScopeType;
         scopeId: string;
         registeredVoters: number | null;
@@ -166,11 +166,11 @@ export declare class CollationService {
         } | null;
     } & {
         id: string;
-        createdAt: Date;
-        campaignId: string;
         status: import("@electromon/db").$Enums.CollationResultStatus;
-        level: import("@electromon/db").$Enums.CollationLevel;
+        createdAt: Date;
         updatedAt: Date;
+        campaignId: string;
+        level: import("@electromon/db").$Enums.CollationLevel;
         scopeType: import("@electromon/db").$Enums.ScopeType;
         scopeId: string;
         registeredVoters: number | null;
@@ -188,8 +188,8 @@ export declare class CollationService {
     } & {
         pollingUnit: {
             id: string;
-            name: string;
             code: string;
+            name: string;
             wardId: string;
         } | null;
     })[]>;
@@ -197,9 +197,15 @@ export declare class CollationService {
         page?: number;
         limit?: number;
         search?: string;
-        status?: CollationResultStatus;
+        status?: CollationResultStatus | 'NOT_STARTED';
     }): Promise<{
         data: ({
+            pollingUnit: {
+                id: string;
+                code: string;
+                name: string;
+                wardId: string;
+            };
             submittedBy: {
                 id: string;
                 email: string;
@@ -212,13 +218,12 @@ export declare class CollationService {
                 firstName: string;
                 lastName: string;
             } | null;
-        } & {
             id: string;
-            createdAt: Date;
-            campaignId: string;
             status: import("@electromon/db").$Enums.CollationResultStatus;
-            level: import("@electromon/db").$Enums.CollationLevel;
+            createdAt: Date;
             updatedAt: Date;
+            campaignId: string;
+            level: import("@electromon/db").$Enums.CollationLevel;
             scopeType: import("@electromon/db").$Enums.ScopeType;
             scopeId: string;
             registeredVoters: number | null;
@@ -233,13 +238,35 @@ export declare class CollationService {
             approvedAt: Date | null;
             rejectionReason: string | null;
             parentResultId: string | null;
-        } & {
+        } | {
+            id: string;
+            campaignId: string;
+            level: CollationLevel;
+            scopeType: ScopeType;
+            scopeId: string;
+            registeredVoters: null;
+            accreditedVoters: null;
+            votesCast: null;
+            partyResults: null;
+            ec8aPhotoUrls: string[];
+            approvalComment: null;
+            status: "NOT_STARTED";
+            submittedById: null;
+            submittedAt: null;
+            approvedById: null;
+            approvedAt: null;
+            rejectionReason: null;
+            parentResultId: null;
+            createdAt: null;
+            updatedAt: null;
+            submittedBy: null;
+            approvedBy: null;
             pollingUnit: {
                 id: string;
-                name: string;
                 code: string;
+                name: string;
                 wardId: string;
-            } | null;
+            };
         })[];
         meta: {
             page: number;
@@ -251,9 +278,26 @@ export declare class CollationService {
             submitted: number;
             approved: number;
             rejected: number;
+            draft: number;
+            notStarted: number;
+            totalPus: number;
+        };
+        wardMeta: {
+            returnedByLga: boolean;
+            canReturnApprovedPus: boolean;
+            canResubmitToLga: boolean;
+            rejectionReason: string | null;
         };
     }>;
-    listLgaWardSubmissions(user: JwtPayload): Promise<({
+    listLgaWardSubmissions(user: JwtPayload): Promise<{
+        puReadiness: {
+            totalPus: number;
+            approvedPus: number;
+            submittedPus: number;
+            rejectedPus: number;
+            missingPus: number;
+            readyForLgaApproval: boolean;
+        };
         submittedBy: {
             id: string;
             email: string;
@@ -266,13 +310,12 @@ export declare class CollationService {
             firstName: string;
             lastName: string;
         } | null;
-    } & {
         id: string;
-        createdAt: Date;
-        campaignId: string;
         status: import("@electromon/db").$Enums.CollationResultStatus;
-        level: import("@electromon/db").$Enums.CollationLevel;
+        createdAt: Date;
         updatedAt: Date;
+        campaignId: string;
+        level: import("@electromon/db").$Enums.CollationLevel;
         scopeType: import("@electromon/db").$Enums.ScopeType;
         scopeId: string;
         registeredVoters: number | null;
@@ -287,14 +330,13 @@ export declare class CollationService {
         approvedAt: Date | null;
         rejectionReason: string | null;
         parentResultId: string | null;
-    } & {
         ward: {
             id: string;
             name: string;
             registrationAreaCode: string | null;
             lgaId: string;
         } | null;
-    })[]>;
+    }[]>;
     listLgaWardPuResults(user: JwtPayload, wardId: string): Promise<({
         submittedBy: {
             id: string;
@@ -310,11 +352,11 @@ export declare class CollationService {
         } | null;
     } & {
         id: string;
-        createdAt: Date;
-        campaignId: string;
         status: import("@electromon/db").$Enums.CollationResultStatus;
-        level: import("@electromon/db").$Enums.CollationLevel;
+        createdAt: Date;
         updatedAt: Date;
+        campaignId: string;
+        level: import("@electromon/db").$Enums.CollationLevel;
         scopeType: import("@electromon/db").$Enums.ScopeType;
         scopeId: string;
         registeredVoters: number | null;
@@ -332,8 +374,8 @@ export declare class CollationService {
     } & {
         pollingUnit: {
             id: string;
-            name: string;
             code: string;
+            name: string;
             wardId: string;
         } | null;
     })[]>;
@@ -352,11 +394,11 @@ export declare class CollationService {
         } | null;
     } & {
         id: string;
-        createdAt: Date;
-        campaignId: string;
         status: import("@electromon/db").$Enums.CollationResultStatus;
-        level: import("@electromon/db").$Enums.CollationLevel;
+        createdAt: Date;
         updatedAt: Date;
+        campaignId: string;
+        level: import("@electromon/db").$Enums.CollationLevel;
         scopeType: import("@electromon/db").$Enums.ScopeType;
         scopeId: string;
         registeredVoters: number | null;
@@ -374,8 +416,8 @@ export declare class CollationService {
     } & {
         pollingUnit: {
             id: string;
-            name: string;
             code: string;
+            name: string;
             wardId: string;
         } | null;
     }) | null>;
@@ -387,11 +429,11 @@ export declare class CollationService {
     private enrichPuResults;
     upsertResult(user: JwtPayload, dto: CreateCollationResultDto): Promise<{
         id: string;
-        createdAt: Date;
-        campaignId: string;
         status: import("@electromon/db").$Enums.CollationResultStatus;
-        level: import("@electromon/db").$Enums.CollationLevel;
+        createdAt: Date;
         updatedAt: Date;
+        campaignId: string;
+        level: import("@electromon/db").$Enums.CollationLevel;
         scopeType: import("@electromon/db").$Enums.ScopeType;
         scopeId: string;
         registeredVoters: number | null;
@@ -409,11 +451,11 @@ export declare class CollationService {
     }>;
     attachEc8aPhoto(user: JwtPayload, id: string, photoUrl: string): Promise<{
         id: string;
-        createdAt: Date;
-        campaignId: string;
         status: import("@electromon/db").$Enums.CollationResultStatus;
-        level: import("@electromon/db").$Enums.CollationLevel;
+        createdAt: Date;
         updatedAt: Date;
+        campaignId: string;
+        level: import("@electromon/db").$Enums.CollationLevel;
         scopeType: import("@electromon/db").$Enums.ScopeType;
         scopeId: string;
         registeredVoters: number | null;
@@ -431,11 +473,11 @@ export declare class CollationService {
     }>;
     submitResult(user: JwtPayload, id: string): Promise<{
         id: string;
-        createdAt: Date;
-        campaignId: string;
         status: import("@electromon/db").$Enums.CollationResultStatus;
-        level: import("@electromon/db").$Enums.CollationLevel;
+        createdAt: Date;
         updatedAt: Date;
+        campaignId: string;
+        level: import("@electromon/db").$Enums.CollationLevel;
         scopeType: import("@electromon/db").$Enums.ScopeType;
         scopeId: string;
         registeredVoters: number | null;
@@ -453,11 +495,11 @@ export declare class CollationService {
     }>;
     approveResult(user: JwtPayload, id: string, dto?: ApproveCollationResultDto): Promise<{
         id: string;
-        createdAt: Date;
-        campaignId: string;
         status: import("@electromon/db").$Enums.CollationResultStatus;
-        level: import("@electromon/db").$Enums.CollationLevel;
+        createdAt: Date;
         updatedAt: Date;
+        campaignId: string;
+        level: import("@electromon/db").$Enums.CollationLevel;
         scopeType: import("@electromon/db").$Enums.ScopeType;
         scopeId: string;
         registeredVoters: number | null;
@@ -475,11 +517,11 @@ export declare class CollationService {
     }>;
     rejectResult(user: JwtPayload, id: string, dto: RejectCollationResultDto): Promise<{
         id: string;
-        createdAt: Date;
-        campaignId: string;
         status: import("@electromon/db").$Enums.CollationResultStatus;
-        level: import("@electromon/db").$Enums.CollationLevel;
+        createdAt: Date;
         updatedAt: Date;
+        campaignId: string;
+        level: import("@electromon/db").$Enums.CollationLevel;
         scopeType: import("@electromon/db").$Enums.ScopeType;
         scopeId: string;
         registeredVoters: number | null;
@@ -495,6 +537,52 @@ export declare class CollationService {
         rejectionReason: string | null;
         parentResultId: string | null;
     }>;
+    resubmitWardToLga(user: JwtPayload): Promise<{
+        id: string;
+        status: import("@electromon/db").$Enums.CollationResultStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        campaignId: string;
+        level: import("@electromon/db").$Enums.CollationLevel;
+        scopeType: import("@electromon/db").$Enums.ScopeType;
+        scopeId: string;
+        registeredVoters: number | null;
+        accreditedVoters: number | null;
+        votesCast: number | null;
+        partyResults: Prisma.JsonValue | null;
+        ec8aPhotoUrls: string[];
+        approvalComment: string | null;
+        submittedById: string | null;
+        submittedAt: Date | null;
+        approvedById: string | null;
+        approvedAt: Date | null;
+        rejectionReason: string | null;
+        parentResultId: string | null;
+    }>;
+    private isWardReturnedByLga;
+    private rebuildWardRollupAfterPuChange;
+    listActionLogs(user: JwtPayload, resultId: string): Promise<({
+        actor: {
+            id: string;
+            email: string;
+            firstName: string;
+            lastName: string;
+        };
+    } & {
+        id: string;
+        createdAt: Date;
+        campaignId: string;
+        collationResultId: string;
+        action: import("@electromon/db").$Enums.CollationActionType;
+        actorId: string;
+        fromStatus: import("@electromon/db").$Enums.CollationResultStatus | null;
+        toStatus: import("@electromon/db").$Enums.CollationResultStatus;
+        comment: string | null;
+        metadata: Prisma.JsonValue | null;
+    })[]>;
+    private getWardPuReadinessMap;
+    private assertAllPollingUnitsApprovedInWard;
+    private writeActionLog;
     private assertCollationUser;
     private getOwnedResult;
     private verifyApproverScope;

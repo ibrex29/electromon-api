@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PrismaClient, CampaignRole, ScopeType, SupportGroupCategory, VerificationStatus, CommitmentStatus, FieldReportType, IncidentType, IncidentSeverity, SituationStatus } from '../src/generated/client';
+import { PrismaClient, CampaignRole, ScopeType, SupportGroupCategory, VerificationStatus, CommitmentStatus, FieldReportType, FieldReportStatus, IncidentType, IncidentSeverity, SituationStatus } from '../src/generated/client';
 import { createPgAdapter } from '../src/client';
 import { seedJigawaInecFromDirectory } from './seed-inec';
 import { seedHadejiaCollationResults, seedStateLgaSummaries } from './seed-collation';
@@ -267,19 +267,26 @@ async function main() {
     seededOfficers[officer.email] = user.id;
   }
 
-  console.log('Seeding collation results (APC vs PDP vs NNPP)...');
+  console.log('Seeding collation results (Hadejia scenarios + state LGA fill)...');
   const hadejiaStats = await seedHadejiaCollationResults(
     prisma,
     campaign.id,
     hadejia.id,
     PARTY_CODES,
-    seededOfficers['pu.officer@electromon.ng'],
+    {
+      puOfficerId: seededOfficers['pu.officer@electromon.ng'],
+      wardOfficerId: seededOfficers['ward.officer@electromon.ng'],
+      lgaOfficerId: seededOfficers['lga.officer@electromon.ng'],
+    },
   );
   await seedStateLgaSummaries(prisma, campaign.id, jigawa.id, PARTY_CODES);
   console.log(
-    `  Hadejia: ${hadejiaStats.seededPus} PUs, ${hadejiaStats.seededWards} wards with sample results`,
+    `  Hadejia: ${hadejiaStats.seededPus} PUs, ${hadejiaStats.seededWards} wards with scenario results`,
   );
   console.log(`  Campaign party: ${CLIENT_PARTY_CODE} · Tracking: ${PARTY_CODES.join(', ')}`);
+  if (hadejiaStats.incompleteWardId) {
+    console.log(`  Incomplete-PU ward (LGA approve gate): ${hadejiaStats.incompleteWardId}`);
+  }
 
   const dutse = await prisma.lGA.findFirstOrThrow({
     where: { name: 'Dutse', stateId: jigawa.id },
@@ -469,25 +476,70 @@ async function main() {
   const fieldReportSamples = [
     {
       campaignId: campaign.id,
-      reportedById: director.id,
+      reportedById: seededOfficers['pu.officer@electromon.ng'] ?? director.id,
       type: FieldReportType.CAMPAIGN_PROGRESS,
       title: 'Strong turnout in ATAFI ward',
-      description: 'Early morning reports indicate higher than expected voter turnout at ATAFI/RAMIN ATAFI polling unit.',
+      description:
+        'Early morning reports indicate higher than expected voter turnout at ATAFI/RAMIN ATAFI polling unit.',
       wardId: ward.id,
       pollingUnitId: pu001?.id,
       isUrgent: false,
+      status: FieldReportStatus.OPEN,
     },
     {
       campaignId: campaign.id,
-      reportedById: director.id,
+      reportedById: seededOfficers['pu.officer@electromon.ng'] ?? director.id,
       type: FieldReportType.INCIDENT,
       incidentType: IncidentType.UNAUTHORIZED_PERSONNEL,
       incidentSeverity: IncidentSeverity.HIGH,
       title: 'Opposition supporters near 17-13-01-002',
-      description: 'Group of unidentified persons gathering 200m from KASGAYAMA polling unit. Local coordinators notified.',
+      description:
+        'Group of unidentified persons gathering 200m from polling unit. Local coordinators notified.',
       wardId: ward.id,
       pollingUnitId: pu002?.id,
       isUrgent: true,
+      status: FieldReportStatus.OPEN,
+    },
+    {
+      campaignId: campaign.id,
+      reportedById: seededOfficers['pu.officer@electromon.ng'] ?? director.id,
+      type: FieldReportType.INCIDENT,
+      incidentType: IncidentType.BVAS_MALFUNCTION,
+      incidentSeverity: IncidentSeverity.MEDIUM,
+      title: 'BVAS intermittent lag at 17-13-01-001',
+      description: 'Intermittent BVAS delays; technical team informed. Voting ongoing.',
+      wardId: ward.id,
+      pollingUnitId: pu001?.id,
+      isUrgent: false,
+      status: FieldReportStatus.OPEN,
+    },
+    {
+      campaignId: campaign.id,
+      reportedById: seededOfficers['pu.officer@electromon.ng'] ?? director.id,
+      type: FieldReportType.INCIDENT,
+      incidentType: IncidentType.VOTE_BUYING,
+      incidentSeverity: IncidentSeverity.CRITICAL,
+      title: 'Alleged inducement near ATAFI unit',
+      description: 'Witnesses reported cash inducements; escalated for LGA awareness.',
+      wardId: ward.id,
+      pollingUnitId: pu001?.id,
+      isUrgent: true,
+      status: FieldReportStatus.ESCALATED,
+      wardComment: 'Escalated to LGA security desk',
+    },
+    {
+      campaignId: campaign.id,
+      reportedById: seededOfficers['pu.officer@electromon.ng'] ?? director.id,
+      type: FieldReportType.INCIDENT,
+      incidentType: IncidentType.LATE_OR_FAILED_OPENING,
+      incidentSeverity: IncidentSeverity.LOW,
+      title: 'Late materials delivery — resolved',
+      description: 'Materials arrived 40 minutes late; unit opened after arrival.',
+      wardId: ward.id,
+      pollingUnitId: pu002?.id,
+      isUrgent: false,
+      status: FieldReportStatus.RESOLVED,
+      wardComment: 'Resolved locally after materials arrived',
     },
   ];
 
@@ -497,7 +549,21 @@ async function main() {
     });
     if (!existing) {
       await prisma.fieldReport.create({
-        data: { ...report, photoUrls: [] },
+        data: {
+          campaignId: report.campaignId,
+          reportedById: report.reportedById,
+          type: report.type,
+          incidentType: report.incidentType,
+          incidentSeverity: report.incidentSeverity,
+          title: report.title,
+          description: report.description,
+          wardId: report.wardId,
+          pollingUnitId: report.pollingUnitId,
+          isUrgent: report.isUrgent,
+          status: report.status,
+          wardComment: report.wardComment,
+          photoUrls: [],
+        },
       });
     }
   }
@@ -509,11 +575,17 @@ async function main() {
   console.log('  Collation hierarchy accounts:');
   console.log('    1. PU Officer:        pu.officer@electromon.ng       (17-13-01-001 ATAFI/RAMIN ATAFI)');
   console.log('    2. Ward/RA Officer:   ward.officer@electromon.ng     (ATAFI ward)');
-  console.log('    3. LGA Officer:       lga.officer@electromon.ng      (Hadejia LGA — real INEC wards/PUs)');
+  console.log('    3. LGA Officer:       lga.officer@electromon.ng      (Hadejia LGA)');
   console.log('    4. State Officer:     state.officer@electromon.ng    (Jigawa State)');
   console.log('    5. National Officer:  national.officer@electromon.ng (Abuja)');
+  console.log('    Admin:               director@electromon.ng');
   console.log('');
-  console.log('  Admin: director@electromon.ng');
+  console.log('  Suggested test cases:');
+  console.log('    PU officer  → draft/submit 17-13-01-001, upload EC8A, report incidents');
+  console.log('    Ward officer → ATAFI: await approval PUs, returned PU, LGA-returned ward banner');
+  console.log('    LGA officer  → filters (awaiting / approved / returned), approve only when PUs complete');
+  console.log('                → incomplete ward cannot be approved until every PU is approved');
+  console.log('    State officer → Hadejia LGA rollup awaiting state review');
 }
 
 main()
