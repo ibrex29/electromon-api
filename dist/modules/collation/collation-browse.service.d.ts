@@ -84,7 +84,7 @@ export declare class CollationBrowseService {
             id: string;
             name: string;
             href: string;
-        };
+        } | undefined;
         data: {
             id: string;
             name: string;
@@ -114,7 +114,7 @@ export declare class CollationBrowseService {
             id: string;
             name: string;
             href: string;
-        };
+        } | undefined;
         data: {
             id: string;
             name: string;
@@ -144,7 +144,7 @@ export declare class CollationBrowseService {
             id: string;
             name: string;
             href: string;
-        };
+        } | undefined;
         data: {
             id: string;
             name: string;
@@ -171,6 +171,11 @@ export declare class CollationBrowseService {
         title: string;
         subtitle: string;
         level: "POLLING_UNIT";
+        parent: {
+            id: string;
+            name: string;
+            href: string;
+        } | undefined;
         data: {
             id: string;
             name: string;

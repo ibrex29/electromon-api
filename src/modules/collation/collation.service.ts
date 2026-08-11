@@ -13,6 +13,7 @@ import {
   getParentLevel,
   getCollationLevelForRole,
 } from '@electromon/shared';
+import { Prisma } from '@electromon/db';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ScopeResolverService } from '../../common/collation/scope-resolver.service';
 import { CreateCollationResultDto, RejectCollationResultDto, ApproveCollationResultDto } from './dto/collation.dto';
@@ -118,39 +119,100 @@ export class CollationService {
     );
   }
 
-  async listWardPuSubmissions(user: JwtPayload) {
+  async listWardPuSubmissions(
+    user: JwtPayload,
+    options: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      status?: CollationResultStatus;
+    } = {},
+  ) {
     this.assertCollationUser(user);
     if (user.scopeType !== ScopeType.WARD || !user.scopeId) {
       throw new ForbiddenException('This endpoint is for ward-scoped officers');
     }
 
-    const puIds = await this.getChildScopeIds(
-      ScopeType.WARD,
-      user.scopeId,
-      CollationLevel.POLLING_UNIT,
-    );
+    const page = Math.max(1, options.page ?? 1);
+    const limit = Math.min(50, Math.max(1, options.limit ?? 10));
+    const search = options.search?.trim();
 
-    return this.enrichPuResults(
-      await this.prisma.collationResult.findMany({
-        where: {
-          campaignId: user.campaignId,
-          level: CollationLevel.POLLING_UNIT,
-          scopeId: { in: puIds },
-          status: {
-            in: [
-              CollationResultStatus.SUBMITTED,
-              CollationResultStatus.APPROVED,
-              CollationResultStatus.REJECTED,
+    const puWhere: Prisma.PollingUnitWhereInput = {
+      wardId: user.scopeId,
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search, mode: Prisma.QueryMode.insensitive } },
+              { code: { contains: search, mode: Prisma.QueryMode.insensitive } },
             ],
-          },
-        },
-        orderBy: { submittedAt: 'desc' },
+          }
+        : {}),
+    };
+
+    const matchingPus = await this.prisma.pollingUnit.findMany({
+      where: puWhere,
+      select: { id: true },
+    });
+    const puIds = matchingPus.map((pu) => pu.id);
+
+    const visibleStatuses = [
+      CollationResultStatus.SUBMITTED,
+      CollationResultStatus.APPROVED,
+      CollationResultStatus.REJECTED,
+    ];
+
+    const baseWhere: Prisma.CollationResultWhereInput = {
+      campaignId: user.campaignId,
+      level: CollationLevel.POLLING_UNIT,
+      scopeId: { in: puIds },
+    };
+
+    const where: Prisma.CollationResultWhereInput = {
+      ...baseWhere,
+      status: options.status ?? { in: visibleStatuses },
+    };
+
+    if (puIds.length === 0) {
+      return {
+        data: [],
+        meta: { page, limit, total: 0, totalPages: 0 },
+        statusCounts: { submitted: 0, approved: 0, rejected: 0 },
+      };
+    }
+
+    const [total, results, submitted, approved, rejected] = await Promise.all([
+      this.prisma.collationResult.count({ where }),
+      this.prisma.collationResult.findMany({
+        where,
+        orderBy: [{ submittedAt: { sort: 'desc', nulls: 'last' } }, { updatedAt: 'desc' }],
+        skip: (page - 1) * limit,
+        take: limit,
         include: {
           submittedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
           approvedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
         },
       }),
-    );
+      this.prisma.collationResult.count({
+        where: { ...baseWhere, status: CollationResultStatus.SUBMITTED },
+      }),
+      this.prisma.collationResult.count({
+        where: { ...baseWhere, status: CollationResultStatus.APPROVED },
+      }),
+      this.prisma.collationResult.count({
+        where: { ...baseWhere, status: CollationResultStatus.REJECTED },
+      }),
+    ]);
+
+    return {
+      data: await this.enrichPuResults(results),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+      },
+      statusCounts: { submitted, approved, rejected },
+    };
   }
 
   async listLgaWardSubmissions(user: JwtPayload) {

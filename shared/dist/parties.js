@@ -1,17 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PARTY_COLUMNS = exports.DEFAULT_TRACKED_PARTIES = void 0;
+exports.PARTY_COLUMNS = exports.NIGERIAN_REGISTERED_PARTIES = exports.DEFAULT_TRACKED_PARTIES = void 0;
 exports.getPartyCodes = getPartyCodes;
 exports.normalizeTrackedParties = normalizeTrackedParties;
 exports.emptyPartyTotals = emptyPartyTotals;
 exports.parsePartyTotals = parsePartyTotals;
 exports.sumPartyMaps = sumPartyMaps;
-/** Default Jigawa 2027 governorship contestants */
-exports.DEFAULT_TRACKED_PARTIES = [
-    { code: 'APC', name: 'All Progressives Congress', color: '#2563eb' },
-    { code: 'PDP', name: "People's Democratic Party", color: '#dc2626' },
-    { code: 'NNPP', name: 'New Nigeria Peoples Party', color: '#d97706' },
-];
+const nigerian_parties_1 = require("./nigerian-parties");
+Object.defineProperty(exports, "NIGERIAN_REGISTERED_PARTIES", { enumerable: true, get: function () { return nigerian_parties_1.NIGERIAN_REGISTERED_PARTIES; } });
+/** Fallback when campaign.trackedParties is missing — full INEC party list */
+exports.DEFAULT_TRACKED_PARTIES = nigerian_parties_1.NIGERIAN_REGISTERED_PARTIES;
 /** @deprecated Use campaign.trackedParties — kept for backwards compatibility */
 exports.PARTY_COLUMNS = exports.DEFAULT_TRACKED_PARTIES.map((p) => p.code);
 function getPartyCodes(parties) {
@@ -21,14 +19,20 @@ function normalizeTrackedParties(input) {
     if (!Array.isArray(input) || input.length === 0) {
         return exports.DEFAULT_TRACKED_PARTIES;
     }
-    return input
-        .filter((item) => {
-        return (!!item &&
-            typeof item === 'object' &&
-            typeof item.code === 'string' &&
-            typeof item.name === 'string');
-    })
-        .slice(0, 5);
+    const seen = new Set();
+    return input.filter((item) => {
+        if (!item ||
+            typeof item !== 'object' ||
+            typeof item.code !== 'string' ||
+            typeof item.name !== 'string') {
+            return false;
+        }
+        const code = item.code.toUpperCase();
+        if (seen.has(code))
+            return false;
+        seen.add(code);
+        return true;
+    });
 }
 function emptyPartyTotals(partyCodes = getPartyCodes(exports.DEFAULT_TRACKED_PARTIES)) {
     return Object.fromEntries(partyCodes.map((code) => [code, 0]));
@@ -48,7 +52,7 @@ function parsePartyTotals(input, partyCodes = getPartyCodes(exports.DEFAULT_TRAC
 function sumPartyMaps(values) {
     if (values.length === 0)
         return {};
-    const codes = Object.keys(values[0] ?? {});
+    const codes = [...new Set(values.flatMap((entry) => Object.keys(entry)))];
     const totals = emptyPartyTotals(codes);
     for (const entry of values) {
         for (const code of codes) {

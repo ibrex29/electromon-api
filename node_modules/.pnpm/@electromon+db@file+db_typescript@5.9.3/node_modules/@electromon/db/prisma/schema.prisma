@@ -77,6 +77,29 @@ enum FieldReportType {
   OPPOSITION_ACTIVITY
   CAMPAIGN_PROGRESS
   DAILY_SITREP
+  INCIDENT
+}
+
+enum IncidentType {
+  VOTER_INTIMIDATION
+  BALLOT_SNATCHING
+  BALLOT_STUFFING
+  VOTE_BUYING
+  VIOLENCE_THUGGERY
+  MATERIALS_SHORTAGE
+  LATE_OR_FAILED_OPENING
+  BVAS_MALFUNCTION
+  UNAUTHORIZED_PERSONNEL
+  OVERVOTING
+  OPPOSITION_DISRUPTION
+  OTHERS
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }
 
 enum FieldReportStatus {
@@ -475,8 +498,10 @@ model FieldReport {
   id            String            @id @default(cuid())
   campaignId    String
   reportedById  String
-  type          FieldReportType
-  title         String
+  type             FieldReportType
+  incidentType     IncidentType?
+  incidentSeverity IncidentSeverity?
+  title            String
   description   String
   wardId        String?
   pollingUnitId String?
@@ -499,6 +524,8 @@ model FieldReport {
 
   @@index([campaignId])
   @@index([type])
+  @@index([incidentType])
+  @@index([incidentSeverity])
   @@index([status])
   @@index([wardId])
   @@index([createdAt])

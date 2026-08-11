@@ -157,9 +157,17 @@ let CollationBrowseService = class CollationBrowseService {
             stateName: context.stateName,
             stateId: context.stateId,
             title: lga.name.toUpperCase(),
-            subtitle: 'List of Wards',
+            subtitle: this.isScopedToLga(user)
+                ? 'Wards in your LGA'
+                : `Wards in ${lga.name} LGA`,
             level: 'WARD',
-            parent: { id: lga.id, name: lga.name, href: '/dashboard/lgas' },
+            parent: this.isScopedToLga(user)
+                ? undefined
+                : {
+                    id: context.stateId,
+                    name: 'Local Governments',
+                    href: '/dashboard/lgas',
+                },
             data: wards.map((ward, index) => {
                 const parties = (0, shared_1.parsePartyTotals)(resultMap.get(ward.id)?.partyResults, partyConfig.partyColumns);
                 return {
@@ -227,13 +235,28 @@ let CollationBrowseService = class CollationBrowseService {
             },
         });
         const resultMap = new Map(results.map((r) => [r.scopeId, r]));
+        const parent = this.isScopedToWard(user)
+            ? undefined
+            : this.isScopedToLga(user)
+                ? {
+                    id: ward.lga.id,
+                    name: `${ward.lga.name} LGA`,
+                    href: '/dashboard/my-lga',
+                }
+                : {
+                    id: ward.lga.id,
+                    name: `${ward.lga.name} LGA`,
+                    href: `/dashboard/lgas/${ward.lga.id}`,
+                };
         return this.withPartyMeta({
             stateName: context.stateName,
             stateId: context.stateId,
-            title: ward.lga.name.toUpperCase(),
-            subtitle: `Polling Stations — ${ward.name}`,
+            title: ward.name.toUpperCase(),
+            subtitle: this.isScopedToWard(user)
+                ? `Polling stations · ${ward.lga.name} LGA`
+                : `Polling stations · ${ward.lga.name} LGA`,
             level: 'POLLING_UNIT',
-            parent: { id: ward.lga.id, name: ward.lga.name, href: `/dashboard/lgas/${ward.lga.id}` },
+            parent,
             data: pollingUnits.map((pu, index) => {
                 const parties = (0, shared_1.parsePartyTotals)(resultMap.get(pu.id)?.partyResults, partyConfig.partyColumns);
                 return {
@@ -285,14 +308,10 @@ let CollationBrowseService = class CollationBrowseService {
             return this.withPartyMeta({
                 stateName: context.stateName,
                 stateId: context.stateId,
-                title: pollingUnit.ward.lga.name.toUpperCase(),
-                subtitle: `My polling unit — ${pollingUnit.ward.name}`,
+                title: pollingUnit.name.toUpperCase(),
+                subtitle: `My polling unit · ${pollingUnit.ward.name} · ${pollingUnit.ward.lga.name} LGA`,
                 level: 'POLLING_UNIT',
-                parent: {
-                    id: pollingUnit.ward.id,
-                    name: pollingUnit.ward.name,
-                    href: `/dashboard/wards/${pollingUnit.ward.id}`,
-                },
+                parent: undefined,
                 data: [
                     {
                         id: pollingUnit.id,
@@ -346,8 +365,9 @@ let CollationBrowseService = class CollationBrowseService {
                 stateName: context.stateName,
                 stateId: context.stateId,
                 title: pollingUnits[0]?.ward.lga.name.toUpperCase() ?? 'LGA',
-                subtitle: 'Polling Stations',
+                subtitle: 'Polling stations in your LGA',
                 level: 'POLLING_UNIT',
+                parent: undefined,
                 data: pollingUnits.map((pu) => {
                     const parties = (0, shared_1.parsePartyTotals)(resultMap.get(pu.id)?.partyResults, partyConfig.partyColumns);
                     return {

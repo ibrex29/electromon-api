@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CollationService = void 0;
 const common_1 = require("@nestjs/common");
 const shared_1 = require("@electromon/shared");
+const db_1 = require("@electromon/db");
 const prisma_service_1 = require("../../common/prisma/prisma.service");
 const scope_resolver_service_1 = require("../../common/collation/scope-resolver.service");
 const EDITABLE_STATUSES = new Set([
@@ -94,31 +95,83 @@ let CollationService = class CollationService {
             },
         }));
     }
-    async listWardPuSubmissions(user) {
+    async listWardPuSubmissions(user, options = {}) {
         this.assertCollationUser(user);
         if (user.scopeType !== shared_1.ScopeType.WARD || !user.scopeId) {
             throw new common_1.ForbiddenException('This endpoint is for ward-scoped officers');
         }
-        const puIds = await this.getChildScopeIds(shared_1.ScopeType.WARD, user.scopeId, shared_1.CollationLevel.POLLING_UNIT);
-        return this.enrichPuResults(await this.prisma.collationResult.findMany({
-            where: {
-                campaignId: user.campaignId,
-                level: shared_1.CollationLevel.POLLING_UNIT,
-                scopeId: { in: puIds },
-                status: {
-                    in: [
-                        shared_1.CollationResultStatus.SUBMITTED,
-                        shared_1.CollationResultStatus.APPROVED,
-                        shared_1.CollationResultStatus.REJECTED,
+        const page = Math.max(1, options.page ?? 1);
+        const limit = Math.min(50, Math.max(1, options.limit ?? 10));
+        const search = options.search?.trim();
+        const puWhere = {
+            wardId: user.scopeId,
+            ...(search
+                ? {
+                    OR: [
+                        { name: { contains: search, mode: db_1.Prisma.QueryMode.insensitive } },
+                        { code: { contains: search, mode: db_1.Prisma.QueryMode.insensitive } },
                     ],
+                }
+                : {}),
+        };
+        const matchingPus = await this.prisma.pollingUnit.findMany({
+            where: puWhere,
+            select: { id: true },
+        });
+        const puIds = matchingPus.map((pu) => pu.id);
+        const visibleStatuses = [
+            shared_1.CollationResultStatus.SUBMITTED,
+            shared_1.CollationResultStatus.APPROVED,
+            shared_1.CollationResultStatus.REJECTED,
+        ];
+        const baseWhere = {
+            campaignId: user.campaignId,
+            level: shared_1.CollationLevel.POLLING_UNIT,
+            scopeId: { in: puIds },
+        };
+        const where = {
+            ...baseWhere,
+            status: options.status ?? { in: visibleStatuses },
+        };
+        if (puIds.length === 0) {
+            return {
+                data: [],
+                meta: { page, limit, total: 0, totalPages: 0 },
+                statusCounts: { submitted: 0, approved: 0, rejected: 0 },
+            };
+        }
+        const [total, results, submitted, approved, rejected] = await Promise.all([
+            this.prisma.collationResult.count({ where }),
+            this.prisma.collationResult.findMany({
+                where,
+                orderBy: [{ submittedAt: { sort: 'desc', nulls: 'last' } }, { updatedAt: 'desc' }],
+                skip: (page - 1) * limit,
+                take: limit,
+                include: {
+                    submittedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+                    approvedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
                 },
+            }),
+            this.prisma.collationResult.count({
+                where: { ...baseWhere, status: shared_1.CollationResultStatus.SUBMITTED },
+            }),
+            this.prisma.collationResult.count({
+                where: { ...baseWhere, status: shared_1.CollationResultStatus.APPROVED },
+            }),
+            this.prisma.collationResult.count({
+                where: { ...baseWhere, status: shared_1.CollationResultStatus.REJECTED },
+            }),
+        ]);
+        return {
+            data: await this.enrichPuResults(results),
+            meta: {
+                page,
+                limit,
+                total,
+                totalPages: total === 0 ? 0 : Math.ceil(total / limit),
             },
-            orderBy: { submittedAt: 'desc' },
-            include: {
-                submittedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
-                approvedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
-            },
-        }));
+            statusCounts: { submitted, approved, rejected },
+        };
     }
     async listLgaWardSubmissions(user) {
         this.assertCollationUser(user);

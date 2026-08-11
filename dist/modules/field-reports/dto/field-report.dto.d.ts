@@ -1,7 +1,9 @@
-import { FieldReportStatus, FieldReportType } from '@electromon/shared';
+import { FieldReportStatus, FieldReportType, IncidentType, IncidentSeverity } from '@electromon/shared';
 export declare class CreateFieldReportDto {
     campaignId: string;
     type: FieldReportType;
+    incidentType?: IncidentType;
+    incidentSeverity?: IncidentSeverity;
     title: string;
     description: string;
     wardId?: string;
@@ -14,6 +16,8 @@ export declare class CreateFieldReportDto {
 export declare class ListFieldReportsQueryDto {
     campaignId: string;
     type?: FieldReportType;
+    incidentType?: IncidentType;
+    incidentSeverity?: IncidentSeverity;
     isUrgent?: boolean;
     search?: string;
     pollingUnitId?: string;

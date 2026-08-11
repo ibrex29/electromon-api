@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { FieldReportStatus, FieldReportType } from '@electromon/shared';
+import { FieldReportStatus, FieldReportType, IncidentType, IncidentSeverity } from '@electromon/shared';
 import { Transform } from 'class-transformer';
 import {
   IsArray,
@@ -10,7 +10,12 @@ import {
   IsOptional,
   IsString,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
+
+function isIncidentReport(dto: { type?: FieldReportType }) {
+  return dto.type === FieldReportType.INCIDENT || dto.type === FieldReportType.SECURITY_CONCERN;
+}
 
 export class CreateFieldReportDto {
   @ApiProperty({ example: 'cms147z3t001www9ktkqgluw0' })
@@ -21,6 +26,18 @@ export class CreateFieldReportDto {
   @ApiProperty({ enum: FieldReportType })
   @IsEnum(FieldReportType)
   type: FieldReportType;
+
+  @ApiPropertyOptional({ enum: IncidentType, description: 'Required when type is INCIDENT' })
+  @ValidateIf(isIncidentReport)
+  @IsEnum(IncidentType)
+  @IsNotEmpty()
+  incidentType?: IncidentType;
+
+  @ApiPropertyOptional({ enum: IncidentSeverity, description: 'Required when type is INCIDENT' })
+  @ValidateIf(isIncidentReport)
+  @IsEnum(IncidentSeverity)
+  @IsNotEmpty()
+  incidentSeverity?: IncidentSeverity;
 
   @ApiProperty({ example: 'Security concern at PU' })
   @IsString()
@@ -77,6 +94,16 @@ export class ListFieldReportsQueryDto {
   @IsOptional()
   @IsEnum(FieldReportType)
   type?: FieldReportType;
+
+  @ApiPropertyOptional({ enum: IncidentType })
+  @IsOptional()
+  @IsEnum(IncidentType)
+  incidentType?: IncidentType;
+
+  @ApiPropertyOptional({ enum: IncidentSeverity })
+  @IsOptional()
+  @IsEnum(IncidentSeverity)
+  incidentSeverity?: IncidentSeverity;
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -1,17 +1,15 @@
 import { config } from 'dotenv';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PrismaClient, CampaignRole, ScopeType, SupportGroupCategory, VerificationStatus, CommitmentStatus, FieldReportType, SituationStatus } from '../src/generated/client';
+import { PrismaClient, CampaignRole, ScopeType, SupportGroupCategory, VerificationStatus, CommitmentStatus, FieldReportType, IncidentType, IncidentSeverity, SituationStatus } from '../src/generated/client';
 import { createPgAdapter } from '../src/client';
 import { seedJigawaInecFromDirectory } from './seed-inec';
 import { seedHadejiaCollationResults, seedStateLgaSummaries } from './seed-collation';
 import * as bcrypt from 'bcrypt';
 
-const TRACKED_PARTIES = [
-  { code: 'APC', name: 'All Progressives Congress', color: '#2563eb' },
-  { code: 'PDP', name: "People's Democratic Party", color: '#dc2626' },
-  { code: 'NNPP', name: 'New Nigeria Peoples Party', color: '#d97706' },
-];
+import { NIGERIAN_REGISTERED_PARTIES } from '../../shared/src/parties';
+
+const TRACKED_PARTIES = NIGERIAN_REGISTERED_PARTIES;
 const CLIENT_PARTY_CODE = 'APC';
 const PARTY_CODES = TRACKED_PARTIES.map((party) => party.code);
 
@@ -482,7 +480,9 @@ async function main() {
     {
       campaignId: campaign.id,
       reportedById: director.id,
-      type: FieldReportType.SECURITY_CONCERN,
+      type: FieldReportType.INCIDENT,
+      incidentType: IncidentType.UNAUTHORIZED_PERSONNEL,
+      incidentSeverity: IncidentSeverity.HIGH,
       title: 'Opposition supporters near 17-13-01-002',
       description: 'Group of unidentified persons gathering 200m from KASGAYAMA polling unit. Local coordinators notified.',
       wardId: ward.id,

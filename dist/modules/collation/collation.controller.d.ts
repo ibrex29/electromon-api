@@ -54,7 +54,7 @@ export declare class CollationController {
             id: string;
             name: string;
             href: string;
-        };
+        } | undefined;
         data: {
             id: string;
             name: string;
@@ -84,7 +84,7 @@ export declare class CollationController {
             id: string;
             name: string;
             href: string;
-        };
+        } | undefined;
         data: {
             id: string;
             name: string;
@@ -114,7 +114,7 @@ export declare class CollationController {
             id: string;
             name: string;
             href: string;
-        };
+        } | undefined;
         data: {
             id: string;
             name: string;
@@ -141,6 +141,11 @@ export declare class CollationController {
         title: string;
         subtitle: string;
         level: "POLLING_UNIT";
+        parent: {
+            id: string;
+            name: string;
+            href: string;
+        } | undefined;
         data: {
             id: string;
             name: string;
@@ -477,48 +482,61 @@ export declare class CollationController {
         approvedCount: number;
         wardIds: string[];
     }>;
-    listWardPuSubmissions(user: JwtPayload): Promise<({
-        submittedBy: {
+    listWardPuSubmissions(user: JwtPayload, page?: string, limit?: string, search?: string, status?: CollationResultStatus): Promise<{
+        data: ({
+            submittedBy: {
+                id: string;
+                email: string;
+                firstName: string;
+                lastName: string;
+            } | null;
+            approvedBy: {
+                id: string;
+                email: string;
+                firstName: string;
+                lastName: string;
+            } | null;
+        } & {
             id: string;
-            email: string;
-            firstName: string;
-            lastName: string;
-        } | null;
-        approvedBy: {
-            id: string;
-            email: string;
-            firstName: string;
-            lastName: string;
-        } | null;
-    } & {
-        id: string;
-        createdAt: Date;
-        campaignId: string;
-        status: import("db/dist").$Enums.CollationResultStatus;
-        level: import("db/dist").$Enums.CollationLevel;
-        updatedAt: Date;
-        scopeType: import("db/dist").$Enums.ScopeType;
-        scopeId: string;
-        registeredVoters: number | null;
-        accreditedVoters: number | null;
-        votesCast: number | null;
-        partyResults: import("db/dist/generated/runtime/client").JsonValue | null;
-        ec8aPhotoUrls: string[];
-        approvalComment: string | null;
-        submittedById: string | null;
-        submittedAt: Date | null;
-        approvedById: string | null;
-        approvedAt: Date | null;
-        rejectionReason: string | null;
-        parentResultId: string | null;
-    } & {
-        pollingUnit: {
-            id: string;
-            name: string;
-            code: string;
-            wardId: string;
-        } | null;
-    })[]>;
+            createdAt: Date;
+            campaignId: string;
+            status: import("db/dist").$Enums.CollationResultStatus;
+            level: import("db/dist").$Enums.CollationLevel;
+            updatedAt: Date;
+            scopeType: import("db/dist").$Enums.ScopeType;
+            scopeId: string;
+            registeredVoters: number | null;
+            accreditedVoters: number | null;
+            votesCast: number | null;
+            partyResults: import("db/dist/generated/runtime/client").JsonValue | null;
+            ec8aPhotoUrls: string[];
+            approvalComment: string | null;
+            submittedById: string | null;
+            submittedAt: Date | null;
+            approvedById: string | null;
+            approvedAt: Date | null;
+            rejectionReason: string | null;
+            parentResultId: string | null;
+        } & {
+            pollingUnit: {
+                id: string;
+                name: string;
+                code: string;
+                wardId: string;
+            } | null;
+        })[];
+        meta: {
+            page: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+        };
+        statusCounts: {
+            submitted: number;
+            approved: number;
+            rejected: number;
+        };
+    }>;
     upsertResult(user: JwtPayload, dto: CreateCollationResultDto): Promise<{
         id: string;
         createdAt: Date;

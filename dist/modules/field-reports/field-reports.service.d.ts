@@ -40,6 +40,8 @@ export declare class FieldReportsService {
         title: string;
         isUrgent: boolean;
         reportedById: string;
+        incidentType: import("@electromon/db").$Enums.IncidentType | null;
+        incidentSeverity: import("@electromon/db").$Enums.IncidentSeverity | null;
         pollingUnitId: string | null;
         photoUrls: string[];
         wardComment: string | null;
@@ -80,6 +82,8 @@ export declare class FieldReportsService {
         title: string;
         isUrgent: boolean;
         reportedById: string;
+        incidentType: import("@electromon/db").$Enums.IncidentType | null;
+        incidentSeverity: import("@electromon/db").$Enums.IncidentSeverity | null;
         pollingUnitId: string | null;
         photoUrls: string[];
         wardComment: string | null;
@@ -120,6 +124,8 @@ export declare class FieldReportsService {
         title: string;
         isUrgent: boolean;
         reportedById: string;
+        incidentType: import("@electromon/db").$Enums.IncidentType | null;
+        incidentSeverity: import("@electromon/db").$Enums.IncidentSeverity | null;
         pollingUnitId: string | null;
         photoUrls: string[];
         wardComment: string | null;

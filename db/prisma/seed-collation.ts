@@ -5,7 +5,7 @@ type PartyTotals = Record<string, number>;
 
 function sumPartyMaps(values: PartyTotals[]): PartyTotals {
   if (values.length === 0) return {};
-  const codes = Object.keys(values[0] ?? {});
+  const codes = [...new Set(values.flatMap((entry) => Object.keys(entry)))];
   const totals: PartyTotals = Object.fromEntries(codes.map((code) => [code, 0]));
   for (const entry of values) {
     for (const code of codes) {
@@ -23,21 +23,32 @@ interface SeedPuResultInput {
   status?: 'DRAFT' | 'SUBMITTED' | 'APPROVED';
 }
 
-/** Deterministic sample votes — APC leads overall with ward-to-ward variation */
+/** Deterministic sample votes — major parties lead; others share remainder */
 export function generateSamplePartyResults(index: number, partyCodes: string[]): PartyTotals {
   const registered = 450 + (index * 37) % 550;
   const turnout = 0.55 + (index % 7) * 0.04;
   const votesCast = Math.round(registered * turnout);
 
-  const apcShare = 0.38 + (index % 5) * 0.04;
-  const pdpShare = 0.32 - (index % 4) * 0.025;
-  const nnppShare = Math.max(0.08, 1 - apcShare - pdpShare);
-
-  const shares: Record<string, number> = {
-    APC: apcShare,
-    PDP: pdpShare,
-    NNPP: nnppShare,
+  const majorWeight = (code: string): number => {
+    switch (code) {
+      case 'APC':
+        return 0.34 + (index % 5) * 0.02;
+      case 'PDP':
+        return 0.26 - (index % 4) * 0.02;
+      case 'NNPP':
+        return 0.1 + (index % 3) * 0.01;
+      case 'LP':
+        return 0.06 + (index % 2) * 0.005;
+      default:
+        return 0;
+    }
   };
+
+  const rawWeights = partyCodes.map((code, i) =>
+    majorWeight(code) > 0 ? majorWeight(code) : 0.015 + (i % 7) * 0.002,
+  );
+  const weightSum = rawWeights.reduce((sum, w) => sum + w, 0) || 1;
+  const shares = rawWeights.map((w) => w / weightSum);
 
   let remaining = votesCast;
   const results: PartyTotals = {};
@@ -45,9 +56,9 @@ export function generateSamplePartyResults(index: number, partyCodes: string[]):
   for (let i = 0; i < partyCodes.length; i++) {
     const code = partyCodes[i]!;
     if (i === partyCodes.length - 1) {
-      results[code] = remaining;
+      results[code] = Math.max(0, remaining);
     } else {
-      const votes = Math.round(votesCast * (shares[code] ?? 0.2));
+      const votes = Math.round(votesCast * (shares[i] ?? 0));
       results[code] = votes;
       remaining -= votes;
     }

@@ -70,8 +70,13 @@ let CollationController = class CollationController {
     approveAllLgaWardResults(user, dto) {
         return this.collationService.approveAllLgaWardResults(user, dto);
     }
-    listWardPuSubmissions(user) {
-        return this.collationService.listWardPuSubmissions(user);
+    listWardPuSubmissions(user, page, limit, search, status) {
+        return this.collationService.listWardPuSubmissions(user, {
+            page: page ? parseInt(page, 10) : undefined,
+            limit: limit ? parseInt(limit, 10) : undefined,
+            search,
+            status,
+        });
     }
     upsertResult(user, dto) {
         return this.collationService.upsertResult(user, dto);
@@ -261,11 +266,19 @@ __decorate([
 __decorate([
     (0, common_1.Get)('ward/pu-submissions'),
     (0, auth_decorators_1.Roles)(shared_1.CampaignRole.WARD_RA_OFFICER, shared_1.CampaignRole.WARD_COORDINATOR),
-    (0, swagger_1.ApiOperation)({ summary: 'All PU collation submissions in the ward officer scope' }),
-    openapi.ApiResponse({ status: 200, type: [Object] }),
+    (0, swagger_1.ApiOperation)({ summary: 'Paginated PU collation submissions in the ward officer scope' }),
+    (0, swagger_1.ApiQuery)({ name: 'page', required: false, type: Number }),
+    (0, swagger_1.ApiQuery)({ name: 'limit', required: false, type: Number }),
+    (0, swagger_1.ApiQuery)({ name: 'search', required: false, type: String }),
+    (0, swagger_1.ApiQuery)({ name: 'status', required: false, enum: shared_1.CollationResultStatus }),
+    openapi.ApiResponse({ status: 200 }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)('page')),
+    __param(2, (0, common_1.Query)('limit')),
+    __param(3, (0, common_1.Query)('search')),
+    __param(4, (0, common_1.Query)('status')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], CollationController.prototype, "listWardPuSubmissions", null);
 __decorate([

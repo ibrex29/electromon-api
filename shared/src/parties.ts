@@ -1,15 +1,15 @@
+import { NIGERIAN_REGISTERED_PARTIES } from './nigerian-parties';
+
 export interface TrackedParty {
   code: string;
   name: string;
   color?: string;
 }
 
-/** Default Jigawa 2027 governorship contestants */
-export const DEFAULT_TRACKED_PARTIES: TrackedParty[] = [
-  { code: 'APC', name: 'All Progressives Congress', color: '#2563eb' },
-  { code: 'PDP', name: "People's Democratic Party", color: '#dc2626' },
-  { code: 'NNPP', name: 'New Nigeria Peoples Party', color: '#d97706' },
-];
+/** Fallback when campaign.trackedParties is missing — full INEC party list */
+export const DEFAULT_TRACKED_PARTIES: TrackedParty[] = NIGERIAN_REGISTERED_PARTIES;
+
+export { NIGERIAN_REGISTERED_PARTIES };
 
 /** @deprecated Use campaign.trackedParties — kept for backwards compatibility */
 export const PARTY_COLUMNS = DEFAULT_TRACKED_PARTIES.map((p) => p.code) as readonly string[];
@@ -26,16 +26,21 @@ export function normalizeTrackedParties(input: unknown): TrackedParty[] {
     return DEFAULT_TRACKED_PARTIES;
   }
 
-  return input
-    .filter((item): item is TrackedParty => {
-      return (
-        !!item &&
-        typeof item === 'object' &&
-        typeof (item as TrackedParty).code === 'string' &&
-        typeof (item as TrackedParty).name === 'string'
-      );
-    })
-    .slice(0, 5);
+  const seen = new Set<string>();
+  return input.filter((item): item is TrackedParty => {
+    if (
+      !item ||
+      typeof item !== 'object' ||
+      typeof (item as TrackedParty).code !== 'string' ||
+      typeof (item as TrackedParty).name !== 'string'
+    ) {
+      return false;
+    }
+    const code = (item as TrackedParty).code.toUpperCase();
+    if (seen.has(code)) return false;
+    seen.add(code);
+    return true;
+  });
 }
 
 export function emptyPartyTotals(partyCodes: string[] = getPartyCodes(DEFAULT_TRACKED_PARTIES)): PartyTotals {
@@ -61,7 +66,7 @@ export function parsePartyTotals(
 
 export function sumPartyMaps(values: PartyTotals[]): PartyTotals {
   if (values.length === 0) return {};
-  const codes = Object.keys(values[0] ?? {});
+  const codes = [...new Set(values.flatMap((entry) => Object.keys(entry)))];
   const totals = emptyPartyTotals(codes);
   for (const entry of values) {
     for (const code of codes) {

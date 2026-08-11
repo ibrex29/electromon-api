@@ -197,9 +197,24 @@ export class CollationController {
 
   @Get('ward/pu-submissions')
   @Roles(CampaignRole.WARD_RA_OFFICER, CampaignRole.WARD_COORDINATOR)
-  @ApiOperation({ summary: 'All PU collation submissions in the ward officer scope' })
-  listWardPuSubmissions(@CurrentUser() user: JwtPayload) {
-    return this.collationService.listWardPuSubmissions(user);
+  @ApiOperation({ summary: 'Paginated PU collation submissions in the ward officer scope' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, enum: CollationResultStatus })
+  listWardPuSubmissions(
+    @CurrentUser() user: JwtPayload,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('status') status?: CollationResultStatus,
+  ) {
+    return this.collationService.listWardPuSubmissions(user, {
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      search,
+      status,
+    });
   }
 
   @Post('results')

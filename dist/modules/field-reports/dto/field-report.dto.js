@@ -15,9 +15,14 @@ const swagger_1 = require("@nestjs/swagger");
 const shared_1 = require("@electromon/shared");
 const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
+function isIncidentReport(dto) {
+    return dto.type === shared_1.FieldReportType.INCIDENT || dto.type === shared_1.FieldReportType.SECURITY_CONCERN;
+}
 class CreateFieldReportDto {
     campaignId;
     type;
+    incidentType;
+    incidentSeverity;
     title;
     description;
     wardId;
@@ -27,7 +32,7 @@ class CreateFieldReportDto {
     isUrgent;
     photoUrls;
     static _OPENAPI_METADATA_FACTORY() {
-        return { campaignId: { required: true, type: () => String }, type: { required: true, enum: require("../../../../shared/dist/enums").FieldReportType }, title: { required: true, type: () => String, minLength: 3 }, description: { required: true, type: () => String, minLength: 5 }, wardId: { required: false, type: () => String }, pollingUnitId: { required: false, type: () => String }, latitude: { required: false, type: () => Number }, longitude: { required: false, type: () => Number }, isUrgent: { required: false, type: () => Boolean }, photoUrls: { required: false, type: () => [String] } };
+        return { campaignId: { required: true, type: () => String }, type: { required: true, enum: require("../../../../shared/dist/enums").FieldReportType }, incidentType: { required: false, enum: require("../../../../shared/dist/enums").IncidentType }, incidentSeverity: { required: false, enum: require("../../../../shared/dist/enums").IncidentSeverity }, title: { required: true, type: () => String, minLength: 3 }, description: { required: true, type: () => String, minLength: 5 }, wardId: { required: false, type: () => String }, pollingUnitId: { required: false, type: () => String }, latitude: { required: false, type: () => Number }, longitude: { required: false, type: () => Number }, isUrgent: { required: false, type: () => Boolean }, photoUrls: { required: false, type: () => [String] } };
     }
 }
 exports.CreateFieldReportDto = CreateFieldReportDto;
@@ -42,6 +47,20 @@ __decorate([
     (0, class_validator_1.IsEnum)(shared_1.FieldReportType),
     __metadata("design:type", String)
 ], CreateFieldReportDto.prototype, "type", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ enum: shared_1.IncidentType, description: 'Required when type is INCIDENT' }),
+    (0, class_validator_1.ValidateIf)(isIncidentReport),
+    (0, class_validator_1.IsEnum)(shared_1.IncidentType),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateFieldReportDto.prototype, "incidentType", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ enum: shared_1.IncidentSeverity, description: 'Required when type is INCIDENT' }),
+    (0, class_validator_1.ValidateIf)(isIncidentReport),
+    (0, class_validator_1.IsEnum)(shared_1.IncidentSeverity),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateFieldReportDto.prototype, "incidentSeverity", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ example: 'Security concern at PU' }),
     (0, class_validator_1.IsString)(),
@@ -97,6 +116,8 @@ __decorate([
 class ListFieldReportsQueryDto {
     campaignId;
     type;
+    incidentType;
+    incidentSeverity;
     isUrgent;
     search;
     pollingUnitId;
@@ -104,7 +125,7 @@ class ListFieldReportsQueryDto {
     wardId;
     status;
     static _OPENAPI_METADATA_FACTORY() {
-        return { campaignId: { required: true, type: () => String }, type: { required: false, enum: require("../../../../shared/dist/enums").FieldReportType }, isUrgent: { required: false, type: () => Boolean }, search: { required: false, type: () => String }, pollingUnitId: { required: false, type: () => String }, reportedById: { required: false, type: () => String }, wardId: { required: false, type: () => String }, status: { required: false, enum: require("../../../../shared/dist/enums").FieldReportStatus } };
+        return { campaignId: { required: true, type: () => String }, type: { required: false, enum: require("../../../../shared/dist/enums").FieldReportType }, incidentType: { required: false, enum: require("../../../../shared/dist/enums").IncidentType }, incidentSeverity: { required: false, enum: require("../../../../shared/dist/enums").IncidentSeverity }, isUrgent: { required: false, type: () => Boolean }, search: { required: false, type: () => String }, pollingUnitId: { required: false, type: () => String }, reportedById: { required: false, type: () => String }, wardId: { required: false, type: () => String }, status: { required: false, enum: require("../../../../shared/dist/enums").FieldReportStatus } };
     }
 }
 exports.ListFieldReportsQueryDto = ListFieldReportsQueryDto;
@@ -120,6 +141,18 @@ __decorate([
     (0, class_validator_1.IsEnum)(shared_1.FieldReportType),
     __metadata("design:type", String)
 ], ListFieldReportsQueryDto.prototype, "type", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ enum: shared_1.IncidentType }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(shared_1.IncidentType),
+    __metadata("design:type", String)
+], ListFieldReportsQueryDto.prototype, "incidentType", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ enum: shared_1.IncidentSeverity }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(shared_1.IncidentSeverity),
+    __metadata("design:type", String)
+], ListFieldReportsQueryDto.prototype, "incidentSeverity", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)(),
     (0, class_validator_1.IsOptional)(),

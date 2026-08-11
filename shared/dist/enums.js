@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MFA_REQUIRED_ROLES = exports.SituationStatus = exports.PollingUnitStatus = exports.PollingUnitStrength = exports.FieldReportStatus = exports.FieldReportType = exports.VerificationStatus = exports.SupportGroupCategory = exports.ScopeType = exports.CampaignRole = void 0;
+exports.MFA_REQUIRED_ROLES = exports.SituationStatus = exports.PollingUnitStatus = exports.PollingUnitStrength = exports.FieldReportStatus = exports.IncidentSeverity = exports.IncidentType = exports.FieldReportType = exports.VerificationStatus = exports.SupportGroupCategory = exports.ScopeType = exports.CampaignRole = void 0;
+exports.isIncidentSeverityUrgent = isIncidentSeverityUrgent;
 var CampaignRole;
 (function (CampaignRole) {
     CampaignRole["CANDIDATE"] = "CANDIDATE";
@@ -55,7 +56,33 @@ var FieldReportType;
     FieldReportType["OPPOSITION_ACTIVITY"] = "OPPOSITION_ACTIVITY";
     FieldReportType["CAMPAIGN_PROGRESS"] = "CAMPAIGN_PROGRESS";
     FieldReportType["DAILY_SITREP"] = "DAILY_SITREP";
+    FieldReportType["INCIDENT"] = "INCIDENT";
 })(FieldReportType || (exports.FieldReportType = FieldReportType = {}));
+var IncidentType;
+(function (IncidentType) {
+    IncidentType["VOTER_INTIMIDATION"] = "VOTER_INTIMIDATION";
+    IncidentType["BALLOT_SNATCHING"] = "BALLOT_SNATCHING";
+    IncidentType["BALLOT_STUFFING"] = "BALLOT_STUFFING";
+    IncidentType["VOTE_BUYING"] = "VOTE_BUYING";
+    IncidentType["VIOLENCE_THUGGERY"] = "VIOLENCE_THUGGERY";
+    IncidentType["MATERIALS_SHORTAGE"] = "MATERIALS_SHORTAGE";
+    IncidentType["LATE_OR_FAILED_OPENING"] = "LATE_OR_FAILED_OPENING";
+    IncidentType["BVAS_MALFUNCTION"] = "BVAS_MALFUNCTION";
+    IncidentType["UNAUTHORIZED_PERSONNEL"] = "UNAUTHORIZED_PERSONNEL";
+    IncidentType["OVERVOTING"] = "OVERVOTING";
+    IncidentType["OPPOSITION_DISRUPTION"] = "OPPOSITION_DISRUPTION";
+    IncidentType["OTHERS"] = "OTHERS";
+})(IncidentType || (exports.IncidentType = IncidentType = {}));
+var IncidentSeverity;
+(function (IncidentSeverity) {
+    IncidentSeverity["LOW"] = "LOW";
+    IncidentSeverity["MEDIUM"] = "MEDIUM";
+    IncidentSeverity["HIGH"] = "HIGH";
+    IncidentSeverity["CRITICAL"] = "CRITICAL";
+})(IncidentSeverity || (exports.IncidentSeverity = IncidentSeverity = {}));
+function isIncidentSeverityUrgent(severity) {
+    return severity === IncidentSeverity.HIGH || severity === IncidentSeverity.CRITICAL;
+}
 var FieldReportStatus;
 (function (FieldReportStatus) {
     FieldReportStatus["OPEN"] = "OPEN";

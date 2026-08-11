@@ -47,6 +47,8 @@ let FieldReportsService = class FieldReportsService {
         const where = {
             campaignId: query.campaignId,
             ...(query.type && { type: query.type }),
+            ...(query.incidentType && { incidentType: query.incidentType }),
+            ...(query.incidentSeverity && { incidentSeverity: query.incidentSeverity }),
             ...(query.status && { status: query.status }),
             ...(query.isUrgent !== undefined && { isUrgent: query.isUrgent }),
             ...(query.pollingUnitId && { pollingUnitId: query.pollingUnitId }),
@@ -70,6 +72,15 @@ let FieldReportsService = class FieldReportsService {
     }
     async create(user, dto) {
         await this.assertCampaignAccess(user.sub, dto.campaignId);
+        const isIncident = dto.type === shared_1.FieldReportType.INCIDENT || dto.type === shared_1.FieldReportType.SECURITY_CONCERN;
+        if (isIncident && !dto.incidentType) {
+            throw new common_1.BadRequestException('incidentType is required for incident reports');
+        }
+        if (isIncident && !dto.incidentSeverity) {
+            throw new common_1.BadRequestException('incidentSeverity is required for incident reports');
+        }
+        const isUrgent = dto.isUrgent ??
+            (dto.incidentSeverity ? (0, shared_1.isIncidentSeverityUrgent)(dto.incidentSeverity) : false);
         let wardId = dto.wardId;
         if (dto.pollingUnitId) {
             const stateId = (await this.prisma.campaign.findUniqueOrThrow({
@@ -88,13 +99,15 @@ let FieldReportsService = class FieldReportsService {
                 campaignId: dto.campaignId,
                 reportedById: user.sub,
                 type: dto.type,
+                incidentType: dto.incidentType,
+                incidentSeverity: dto.incidentSeverity,
                 title: dto.title,
                 description: dto.description,
                 wardId,
                 pollingUnitId: dto.pollingUnitId,
                 latitude: dto.latitude,
                 longitude: dto.longitude,
-                isUrgent: dto.isUrgent ?? false,
+                isUrgent,
                 photoUrls: dto.photoUrls ?? [],
                 status: shared_1.FieldReportStatus.OPEN,
             },

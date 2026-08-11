@@ -214,9 +214,18 @@ export class CollationBrowseService {
         stateName: context.stateName,
         stateId: context.stateId,
         title: lga.name.toUpperCase(),
-        subtitle: 'List of Wards',
+        subtitle: this.isScopedToLga(user)
+          ? 'Wards in your LGA'
+          : `Wards in ${lga.name} LGA`,
         level: 'WARD' as const,
-        parent: { id: lga.id, name: lga.name, href: '/dashboard/lgas' },
+        // Parent is the LGA list (state level), never the same LGA you are already viewing.
+        parent: this.isScopedToLga(user)
+          ? undefined
+          : {
+              id: context.stateId,
+              name: 'Local Governments',
+              href: '/dashboard/lgas',
+            },
         data: wards.map((ward, index) => {
           const parties = parsePartyTotals(
             resultMap.get(ward.id)?.partyResults,
@@ -303,14 +312,30 @@ export class CollationBrowseService {
     });
     const resultMap = new Map(results.map((r) => [r.scopeId, r]));
 
+    const parent = this.isScopedToWard(user)
+      ? undefined
+      : this.isScopedToLga(user)
+        ? {
+            id: ward.lga.id,
+            name: `${ward.lga.name} LGA`,
+            href: '/dashboard/my-lga',
+          }
+        : {
+            id: ward.lga.id,
+            name: `${ward.lga.name} LGA`,
+            href: `/dashboard/lgas/${ward.lga.id}`,
+          };
+
     return this.withPartyMeta(
       {
         stateName: context.stateName,
         stateId: context.stateId,
-        title: ward.lga.name.toUpperCase(),
-        subtitle: `Polling Stations — ${ward.name}`,
+        title: ward.name.toUpperCase(),
+        subtitle: this.isScopedToWard(user)
+          ? `Polling stations · ${ward.lga.name} LGA`
+          : `Polling stations · ${ward.lga.name} LGA`,
         level: 'POLLING_UNIT' as const,
-        parent: { id: ward.lga.id, name: ward.lga.name, href: `/dashboard/lgas/${ward.lga.id}` },
+        parent,
         data: pollingUnits.map((pu, index) => {
           const parties = parsePartyTotals(
             resultMap.get(pu.id)?.partyResults,
@@ -376,14 +401,10 @@ export class CollationBrowseService {
         {
           stateName: context.stateName,
           stateId: context.stateId,
-          title: pollingUnit.ward.lga.name.toUpperCase(),
-          subtitle: `My polling unit — ${pollingUnit.ward.name}`,
+          title: pollingUnit.name.toUpperCase(),
+          subtitle: `My polling unit · ${pollingUnit.ward.name} · ${pollingUnit.ward.lga.name} LGA`,
           level: 'POLLING_UNIT' as const,
-          parent: {
-            id: pollingUnit.ward.id,
-            name: pollingUnit.ward.name,
-            href: `/dashboard/wards/${pollingUnit.ward.id}`,
-          },
+          parent: undefined,
           data: [
             {
               id: pollingUnit.id,
@@ -444,8 +465,9 @@ export class CollationBrowseService {
           stateName: context.stateName,
           stateId: context.stateId,
           title: pollingUnits[0]?.ward.lga.name.toUpperCase() ?? 'LGA',
-          subtitle: 'Polling Stations',
+          subtitle: 'Polling stations in your LGA',
           level: 'POLLING_UNIT' as const,
+          parent: undefined,
           data: pollingUnits.map((pu) => {
             const parties = parsePartyTotals(
               resultMap.get(pu.id)?.partyResults,

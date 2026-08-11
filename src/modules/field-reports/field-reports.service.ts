@@ -1,6 +1,6 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Prisma } from '@electromon/db';
-import { FieldReportStatus, JwtPayload } from '@electromon/shared';
+import { FieldReportStatus, FieldReportType, IncidentType, IncidentSeverity, isIncidentSeverityUrgent, JwtPayload } from '@electromon/shared';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   getWardScopeId,
@@ -51,6 +51,8 @@ export class FieldReportsService {
     const where: Prisma.FieldReportWhereInput = {
       campaignId: query.campaignId,
       ...(query.type && { type: query.type }),
+      ...(query.incidentType && { incidentType: query.incidentType }),
+      ...(query.incidentSeverity && { incidentSeverity: query.incidentSeverity }),
       ...(query.status && { status: query.status }),
       ...(query.isUrgent !== undefined && { isUrgent: query.isUrgent }),
       ...(query.pollingUnitId && { pollingUnitId: query.pollingUnitId }),
@@ -77,6 +79,19 @@ export class FieldReportsService {
   async create(user: JwtPayload, dto: CreateFieldReportDto) {
     await this.assertCampaignAccess(user.sub, dto.campaignId);
 
+    const isIncident =
+      dto.type === FieldReportType.INCIDENT || dto.type === FieldReportType.SECURITY_CONCERN;
+    if (isIncident && !dto.incidentType) {
+      throw new BadRequestException('incidentType is required for incident reports');
+    }
+    if (isIncident && !dto.incidentSeverity) {
+      throw new BadRequestException('incidentSeverity is required for incident reports');
+    }
+
+    const isUrgent =
+      dto.isUrgent ??
+      (dto.incidentSeverity ? isIncidentSeverityUrgent(dto.incidentSeverity) : false);
+
     let wardId = dto.wardId;
     if (dto.pollingUnitId) {
       const stateId = (
@@ -97,13 +112,15 @@ export class FieldReportsService {
         campaignId: dto.campaignId,
         reportedById: user.sub,
         type: dto.type,
+        incidentType: dto.incidentType,
+        incidentSeverity: dto.incidentSeverity,
         title: dto.title,
         description: dto.description,
         wardId,
         pollingUnitId: dto.pollingUnitId,
         latitude: dto.latitude,
         longitude: dto.longitude,
-        isUrgent: dto.isUrgent ?? false,
+        isUrgent,
         photoUrls: dto.photoUrls ?? [],
         status: FieldReportStatus.OPEN,
       },

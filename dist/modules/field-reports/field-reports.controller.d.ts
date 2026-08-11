@@ -38,6 +38,8 @@ export declare class FieldReportsController {
         title: string;
         isUrgent: boolean;
         reportedById: string;
+        incidentType: import("db/dist").$Enums.IncidentType | null;
+        incidentSeverity: import("db/dist").$Enums.IncidentSeverity | null;
         pollingUnitId: string | null;
         photoUrls: string[];
         wardComment: string | null;
@@ -78,6 +80,8 @@ export declare class FieldReportsController {
         title: string;
         isUrgent: boolean;
         reportedById: string;
+        incidentType: import("db/dist").$Enums.IncidentType | null;
+        incidentSeverity: import("db/dist").$Enums.IncidentSeverity | null;
         pollingUnitId: string | null;
         photoUrls: string[];
         wardComment: string | null;
@@ -118,6 +122,8 @@ export declare class FieldReportsController {
         title: string;
         isUrgent: boolean;
         reportedById: string;
+        incidentType: import("db/dist").$Enums.IncidentType | null;
+        incidentSeverity: import("db/dist").$Enums.IncidentSeverity | null;
         pollingUnitId: string | null;
         photoUrls: string[];
         wardComment: string | null;
