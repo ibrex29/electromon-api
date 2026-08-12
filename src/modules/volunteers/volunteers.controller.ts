@@ -55,8 +55,8 @@ export class VolunteersController {
   @Post()
   @Roles(
     CampaignRole.CAMPAIGN_DIRECTOR,
-    CampaignRole.STATE_COORDINATOR,
-    CampaignRole.LGA_COORDINATOR,
+    CampaignRole.STATE_COLLATION_OFFICER,
+    CampaignRole.LGA_COLLATION_OFFICER,
     CampaignRole.VOLUNTEER_COORDINATOR,
   )
   @AuditAction('volunteer.create')
@@ -69,8 +69,8 @@ export class VolunteersController {
   @Patch(':id')
   @Roles(
     CampaignRole.CAMPAIGN_DIRECTOR,
-    CampaignRole.STATE_COORDINATOR,
-    CampaignRole.LGA_COORDINATOR,
+    CampaignRole.STATE_COLLATION_OFFICER,
+    CampaignRole.LGA_COLLATION_OFFICER,
     CampaignRole.VOLUNTEER_COORDINATOR,
   )
   @AuditAction('volunteer.update')
@@ -85,7 +85,7 @@ export class VolunteersController {
   }
 
   @Delete(':id')
-  @Roles(CampaignRole.CAMPAIGN_DIRECTOR, CampaignRole.STATE_COORDINATOR)
+  @Roles(CampaignRole.CAMPAIGN_DIRECTOR, CampaignRole.STATE_COLLATION_OFFICER)
   @AuditAction('volunteer.delete')
   @ApiOperation({ summary: 'Delete a volunteer' })
   @ApiOkResponse({ type: MessageResponseDto })

@@ -18,22 +18,23 @@ export enum CollationResultStatus {
 export const NATIONAL_SCOPE_ID = 'NGA';
 
 export const COLLATION_ROLES: CampaignRole[] = [
-  CampaignRole.POLLING_UNIT_OFFICER,
+  CampaignRole.POLLING_AGENT,
   CampaignRole.WARD_RA_OFFICER,
   CampaignRole.LGA_COLLATION_OFFICER,
   CampaignRole.STATE_COLLATION_OFFICER,
   CampaignRole.NATIONAL_COLLATION_OFFICER,
 ];
 
+/** One role per collation level (legacy dual roles map to the same level for old rows) */
 export const ROLE_TO_COLLATION_LEVEL: Partial<Record<CampaignRole, CollationLevel>> = {
-  [CampaignRole.POLLING_UNIT_OFFICER]: CollationLevel.POLLING_UNIT,
   [CampaignRole.POLLING_AGENT]: CollationLevel.POLLING_UNIT,
+  [CampaignRole.POLLING_UNIT_OFFICER]: CollationLevel.POLLING_UNIT, // legacy
   [CampaignRole.WARD_RA_OFFICER]: CollationLevel.WARD,
-  [CampaignRole.WARD_COORDINATOR]: CollationLevel.WARD,
+  [CampaignRole.WARD_COORDINATOR]: CollationLevel.WARD, // legacy
   [CampaignRole.LGA_COLLATION_OFFICER]: CollationLevel.LGA,
-  [CampaignRole.LGA_COORDINATOR]: CollationLevel.LGA,
+  [CampaignRole.LGA_COORDINATOR]: CollationLevel.LGA, // legacy
   [CampaignRole.STATE_COLLATION_OFFICER]: CollationLevel.STATE,
-  [CampaignRole.STATE_COORDINATOR]: CollationLevel.STATE,
+  [CampaignRole.STATE_COORDINATOR]: CollationLevel.STATE, // legacy
   [CampaignRole.NATIONAL_COLLATION_OFFICER]: CollationLevel.NATIONAL,
 };
 

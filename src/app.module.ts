@@ -13,6 +13,7 @@ import { MetricsController } from './common/metrics/metrics.controller';
 import { MetricsModule } from './common/metrics/metrics.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
+import { AgentsModule } from './modules/agents/agents.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CampaignModule } from './modules/campaign/campaign.module';
 import { CollationModule } from './modules/collation/collation.module';
@@ -40,6 +41,7 @@ import { VolunteersModule } from './modules/volunteers/volunteers.module';
     MetricsModule,
     AuditModule,
     AuthModule,
+    AgentsModule,
     CampaignModule,
     CollationModule,
     StructureModule,

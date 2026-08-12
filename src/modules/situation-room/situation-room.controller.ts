@@ -71,10 +71,9 @@ export class SituationRoomController {
   @Post('updates')
   @Roles(
     CampaignRole.CAMPAIGN_DIRECTOR,
-    CampaignRole.STATE_COORDINATOR,
-    CampaignRole.LGA_COORDINATOR,
-    CampaignRole.WARD_COORDINATOR,
-    CampaignRole.POLLING_UNIT_OFFICER,
+    CampaignRole.STATE_COLLATION_OFFICER,
+    CampaignRole.LGA_COLLATION_OFFICER,
+    CampaignRole.WARD_RA_OFFICER,
     CampaignRole.POLLING_AGENT_COORDINATOR,
     CampaignRole.POLLING_AGENT,
   )
@@ -88,9 +87,9 @@ export class SituationRoomController {
   @Patch('updates/:id')
   @Roles(
     CampaignRole.CAMPAIGN_DIRECTOR,
-    CampaignRole.STATE_COORDINATOR,
-    CampaignRole.LGA_COORDINATOR,
-    CampaignRole.WARD_COORDINATOR,
+    CampaignRole.STATE_COLLATION_OFFICER,
+    CampaignRole.LGA_COLLATION_OFFICER,
+    CampaignRole.WARD_RA_OFFICER,
     CampaignRole.POLLING_AGENT_COORDINATOR,
     CampaignRole.POLLING_AGENT,
   )
@@ -106,7 +105,7 @@ export class SituationRoomController {
   }
 
   @Delete('updates/:id')
-  @Roles(CampaignRole.CAMPAIGN_DIRECTOR, CampaignRole.STATE_COORDINATOR)
+  @Roles(CampaignRole.CAMPAIGN_DIRECTOR, CampaignRole.STATE_COLLATION_OFFICER)
   @AuditAction('situation_update.delete')
   @ApiOperation({ summary: 'Delete a situation update' })
   @ApiQuery({ name: 'campaignId', required: true })

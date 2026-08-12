@@ -28,13 +28,10 @@ export class UploadsController {
   @Post()
   @Roles(
     CampaignRole.CAMPAIGN_DIRECTOR,
-    CampaignRole.STATE_COORDINATOR,
-    CampaignRole.LGA_COORDINATOR,
-    CampaignRole.WARD_COORDINATOR,
-    CampaignRole.POLLING_UNIT_OFFICER,
-    CampaignRole.POLLING_AGENT,
-    CampaignRole.WARD_RA_OFFICER,
+    CampaignRole.STATE_COLLATION_OFFICER,
     CampaignRole.LGA_COLLATION_OFFICER,
+    CampaignRole.WARD_RA_OFFICER,
+    CampaignRole.POLLING_AGENT,
   )
   @UseInterceptors(
     FileInterceptor('file', {

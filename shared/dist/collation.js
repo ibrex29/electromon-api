@@ -23,21 +23,22 @@ var CollationResultStatus;
 })(CollationResultStatus || (exports.CollationResultStatus = CollationResultStatus = {}));
 exports.NATIONAL_SCOPE_ID = 'NGA';
 exports.COLLATION_ROLES = [
-    enums_1.CampaignRole.POLLING_UNIT_OFFICER,
+    enums_1.CampaignRole.POLLING_AGENT,
     enums_1.CampaignRole.WARD_RA_OFFICER,
     enums_1.CampaignRole.LGA_COLLATION_OFFICER,
     enums_1.CampaignRole.STATE_COLLATION_OFFICER,
     enums_1.CampaignRole.NATIONAL_COLLATION_OFFICER,
 ];
+/** One role per collation level (legacy dual roles map to the same level for old rows) */
 exports.ROLE_TO_COLLATION_LEVEL = {
-    [enums_1.CampaignRole.POLLING_UNIT_OFFICER]: CollationLevel.POLLING_UNIT,
     [enums_1.CampaignRole.POLLING_AGENT]: CollationLevel.POLLING_UNIT,
+    [enums_1.CampaignRole.POLLING_UNIT_OFFICER]: CollationLevel.POLLING_UNIT, // legacy
     [enums_1.CampaignRole.WARD_RA_OFFICER]: CollationLevel.WARD,
-    [enums_1.CampaignRole.WARD_COORDINATOR]: CollationLevel.WARD,
+    [enums_1.CampaignRole.WARD_COORDINATOR]: CollationLevel.WARD, // legacy
     [enums_1.CampaignRole.LGA_COLLATION_OFFICER]: CollationLevel.LGA,
-    [enums_1.CampaignRole.LGA_COORDINATOR]: CollationLevel.LGA,
+    [enums_1.CampaignRole.LGA_COORDINATOR]: CollationLevel.LGA, // legacy
     [enums_1.CampaignRole.STATE_COLLATION_OFFICER]: CollationLevel.STATE,
-    [enums_1.CampaignRole.STATE_COORDINATOR]: CollationLevel.STATE,
+    [enums_1.CampaignRole.STATE_COORDINATOR]: CollationLevel.STATE, // legacy
     [enums_1.CampaignRole.NATIONAL_COLLATION_OFFICER]: CollationLevel.NATIONAL,
 };
 exports.LEVEL_TO_SCOPE_TYPE = {

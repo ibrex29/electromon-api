@@ -55,8 +55,8 @@ export class SupportGroupsController {
   @Post()
   @Roles(
     CampaignRole.CAMPAIGN_DIRECTOR,
-    CampaignRole.STATE_COORDINATOR,
-    CampaignRole.LGA_COORDINATOR,
+    CampaignRole.STATE_COLLATION_OFFICER,
+    CampaignRole.LGA_COLLATION_OFFICER,
   )
   @AuditAction('support_group.create')
   @ApiOperation({ summary: 'Register a new support group' })
@@ -68,8 +68,8 @@ export class SupportGroupsController {
   @Patch(':id')
   @Roles(
     CampaignRole.CAMPAIGN_DIRECTOR,
-    CampaignRole.STATE_COORDINATOR,
-    CampaignRole.LGA_COORDINATOR,
+    CampaignRole.STATE_COLLATION_OFFICER,
+    CampaignRole.LGA_COLLATION_OFFICER,
   )
   @AuditAction('support_group.update')
   @ApiOperation({ summary: 'Update a support group' })
@@ -83,7 +83,7 @@ export class SupportGroupsController {
   }
 
   @Delete(':id')
-  @Roles(CampaignRole.CAMPAIGN_DIRECTOR, CampaignRole.STATE_COORDINATOR)
+  @Roles(CampaignRole.CAMPAIGN_DIRECTOR, CampaignRole.STATE_COLLATION_OFFICER)
   @AuditAction('support_group.delete')
   @ApiOperation({ summary: 'Delete a support group' })
   @ApiOkResponse({ type: MessageResponseDto })

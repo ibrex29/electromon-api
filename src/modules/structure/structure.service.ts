@@ -103,10 +103,7 @@ export class StructureService {
           isActive: true,
           role: {
             in: [
-              CampaignRole.LGA_COORDINATOR,
-              CampaignRole.WARD_COORDINATOR,
-              CampaignRole.STATE_COORDINATOR,
-              CampaignRole.POLLING_UNIT_OFFICER,
+              CampaignRole.POLLING_AGENT,
               CampaignRole.WARD_RA_OFFICER,
               CampaignRole.LGA_COLLATION_OFFICER,
               CampaignRole.STATE_COLLATION_OFFICER,

@@ -1,8 +1,11 @@
 export declare enum CampaignRole {
     CANDIDATE = "CANDIDATE",
     CAMPAIGN_DIRECTOR = "CAMPAIGN_DIRECTOR",
+    /** @deprecated Use STATE_COLLATION_OFFICER — kept for existing DB rows */
     STATE_COORDINATOR = "STATE_COORDINATOR",
+    /** @deprecated Use LGA_COLLATION_OFFICER — kept for existing DB rows */
     LGA_COORDINATOR = "LGA_COORDINATOR",
+    /** @deprecated Use WARD_RA_OFFICER — kept for existing DB rows */
     WARD_COORDINATOR = "WARD_COORDINATOR",
     SUPPORT_GROUP_LEADER = "SUPPORT_GROUP_LEADER",
     VOLUNTEER_COORDINATOR = "VOLUNTEER_COORDINATOR",
@@ -11,12 +14,21 @@ export declare enum CampaignRole {
     MEDIA_TEAM = "MEDIA_TEAM",
     POLLING_AGENT = "POLLING_AGENT",
     VOLUNTEER = "VOLUNTEER",
+    /** @deprecated Use POLLING_AGENT — kept for existing DB rows */
     POLLING_UNIT_OFFICER = "POLLING_UNIT_OFFICER",
     WARD_RA_OFFICER = "WARD_RA_OFFICER",
     LGA_COLLATION_OFFICER = "LGA_COLLATION_OFFICER",
     STATE_COLLATION_OFFICER = "STATE_COLLATION_OFFICER",
     NATIONAL_COLLATION_OFFICER = "NATIONAL_COLLATION_OFFICER"
 }
+/** Canonical collation hierarchy — one role per level */
+export declare const LEVEL_ROLES: {
+    readonly POLLING_UNIT: CampaignRole.POLLING_AGENT;
+    readonly WARD: CampaignRole.WARD_RA_OFFICER;
+    readonly LGA: CampaignRole.LGA_COLLATION_OFFICER;
+    readonly STATE: CampaignRole.STATE_COLLATION_OFFICER;
+    readonly NATIONAL: CampaignRole.NATIONAL_COLLATION_OFFICER;
+};
 export declare enum ScopeType {
     STATE = "STATE",
     SENATORIAL_DISTRICT = "SENATORIAL_DISTRICT",

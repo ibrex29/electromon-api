@@ -10,13 +10,13 @@ export declare class CommitmentsController {
             name: string;
         };
     } & {
-        description: string | null;
-        status: import("db/dist").$Enums.CommitmentStatus;
         id: string;
         createdAt: Date;
-        updatedAt: Date;
         campaignId: string;
+        description: string | null;
         title: string;
+        updatedAt: Date;
+        status: import("db/dist").$Enums.CommitmentStatus;
         supportGroupId: string;
         targetValue: number;
         currentValue: number;
@@ -28,13 +28,13 @@ export declare class CommitmentsController {
             name: string;
         };
     } & {
-        description: string | null;
-        status: import("db/dist").$Enums.CommitmentStatus;
         id: string;
         createdAt: Date;
-        updatedAt: Date;
         campaignId: string;
+        description: string | null;
         title: string;
+        updatedAt: Date;
+        status: import("db/dist").$Enums.CommitmentStatus;
         supportGroupId: string;
         targetValue: number;
         currentValue: number;
@@ -46,13 +46,13 @@ export declare class CommitmentsController {
             name: string;
         };
     } & {
-        description: string | null;
-        status: import("db/dist").$Enums.CommitmentStatus;
         id: string;
         createdAt: Date;
-        updatedAt: Date;
         campaignId: string;
+        description: string | null;
         title: string;
+        updatedAt: Date;
+        status: import("db/dist").$Enums.CommitmentStatus;
         supportGroupId: string;
         targetValue: number;
         currentValue: number;
@@ -64,13 +64,13 @@ export declare class CommitmentsController {
             name: string;
         };
     } & {
-        description: string | null;
-        status: import("db/dist").$Enums.CommitmentStatus;
         id: string;
         createdAt: Date;
-        updatedAt: Date;
         campaignId: string;
+        description: string | null;
         title: string;
+        updatedAt: Date;
+        status: import("db/dist").$Enums.CommitmentStatus;
         supportGroupId: string;
         targetValue: number;
         currentValue: number;

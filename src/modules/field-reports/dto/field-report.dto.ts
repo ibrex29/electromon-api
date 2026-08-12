@@ -135,6 +135,11 @@ export class ListFieldReportsQueryDto {
   @IsString()
   wardId?: string;
 
+  @ApiPropertyOptional({ description: 'Filter incidents to a local government area' })
+  @IsOptional()
+  @IsString()
+  lgaId?: string;
+
   @ApiPropertyOptional({ enum: FieldReportStatus })
   @IsOptional()
   @IsEnum(FieldReportStatus)

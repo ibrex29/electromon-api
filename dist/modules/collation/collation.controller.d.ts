@@ -259,14 +259,14 @@ export declare class CollationController {
         } | null;
         pendingApprovals: number;
         myResult: {
-            status: import("db/dist").$Enums.CollationResultStatus;
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            status: import("db/dist").$Enums.CollationResultStatus;
             campaignId: string;
+            level: import("db/dist").$Enums.CollationLevel;
             scopeType: import("db/dist").$Enums.ScopeType;
             scopeId: string;
-            level: import("db/dist").$Enums.CollationLevel;
             registeredVoters: number | null;
             accreditedVoters: number | null;
             votesCast: number | null;
@@ -296,14 +296,14 @@ export declare class CollationController {
             lastName: string;
         } | null;
     } & {
-        status: import("db/dist").$Enums.CollationResultStatus;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        status: import("db/dist").$Enums.CollationResultStatus;
         campaignId: string;
+        level: import("db/dist").$Enums.CollationLevel;
         scopeType: import("db/dist").$Enums.ScopeType;
         scopeId: string;
-        level: import("db/dist").$Enums.CollationLevel;
         registeredVoters: number | null;
         accreditedVoters: number | null;
         votesCast: number | null;
@@ -326,14 +326,14 @@ export declare class CollationController {
             lastName: string;
         } | null;
     } & {
-        status: import("db/dist").$Enums.CollationResultStatus;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        status: import("db/dist").$Enums.CollationResultStatus;
         campaignId: string;
+        level: import("db/dist").$Enums.CollationLevel;
         scopeType: import("db/dist").$Enums.ScopeType;
         scopeId: string;
-        level: import("db/dist").$Enums.CollationLevel;
         registeredVoters: number | null;
         accreditedVoters: number | null;
         votesCast: number | null;
@@ -376,14 +376,14 @@ export declare class CollationController {
             firstName: string;
             lastName: string;
         } | null;
-        status: import("db/dist").$Enums.CollationResultStatus;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        status: import("db/dist").$Enums.CollationResultStatus;
         campaignId: string;
+        level: import("db/dist").$Enums.CollationLevel;
         scopeType: import("db/dist").$Enums.ScopeType;
         scopeId: string;
-        level: import("db/dist").$Enums.CollationLevel;
         registeredVoters: number | null;
         accreditedVoters: number | null;
         votesCast: number | null;
@@ -400,8 +400,8 @@ export declare class CollationController {
         ward: {
             id: string;
             name: string;
-            lgaId: string;
             registrationAreaCode: string | null;
+            lgaId: string;
         } | null;
     }[]>;
     listLgaWardPuResults(user: JwtPayload, wardId: string): Promise<({
@@ -418,14 +418,14 @@ export declare class CollationController {
             lastName: string;
         } | null;
     } & {
-        status: import("db/dist").$Enums.CollationResultStatus;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        status: import("db/dist").$Enums.CollationResultStatus;
         campaignId: string;
+        level: import("db/dist").$Enums.CollationLevel;
         scopeType: import("db/dist").$Enums.ScopeType;
         scopeId: string;
-        level: import("db/dist").$Enums.CollationLevel;
         registeredVoters: number | null;
         accreditedVoters: number | null;
         votesCast: number | null;
@@ -461,14 +461,14 @@ export declare class CollationController {
             lastName: string;
         } | null;
     } & {
-        status: import("db/dist").$Enums.CollationResultStatus;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        status: import("db/dist").$Enums.CollationResultStatus;
         campaignId: string;
+        level: import("db/dist").$Enums.CollationLevel;
         scopeType: import("db/dist").$Enums.ScopeType;
         scopeId: string;
-        level: import("db/dist").$Enums.CollationLevel;
         registeredVoters: number | null;
         accreditedVoters: number | null;
         votesCast: number | null;
@@ -515,14 +515,14 @@ export declare class CollationController {
                 firstName: string;
                 lastName: string;
             } | null;
-            status: import("db/dist").$Enums.CollationResultStatus;
             id: string;
             createdAt: Date;
             updatedAt: Date;
+            status: import("db/dist").$Enums.CollationResultStatus;
             campaignId: string;
+            level: import("db/dist").$Enums.CollationLevel;
             scopeType: import("db/dist").$Enums.ScopeType;
             scopeId: string;
-            level: import("db/dist").$Enums.CollationLevel;
             registeredVoters: number | null;
             accreditedVoters: number | null;
             votesCast: number | null;
@@ -595,14 +595,14 @@ export declare class CollationController {
         };
     }>;
     resubmitWardToLga(user: JwtPayload): Promise<{
-        status: import("db/dist").$Enums.CollationResultStatus;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        status: import("db/dist").$Enums.CollationResultStatus;
         campaignId: string;
+        level: import("db/dist").$Enums.CollationLevel;
         scopeType: import("db/dist").$Enums.ScopeType;
         scopeId: string;
-        level: import("db/dist").$Enums.CollationLevel;
         registeredVoters: number | null;
         accreditedVoters: number | null;
         votesCast: number | null;
@@ -623,14 +623,14 @@ export declare class CollationController {
         reason: string;
     }>;
     upsertResult(user: JwtPayload, dto: CreateCollationResultDto): Promise<{
-        status: import("db/dist").$Enums.CollationResultStatus;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        status: import("db/dist").$Enums.CollationResultStatus;
         campaignId: string;
+        level: import("db/dist").$Enums.CollationLevel;
         scopeType: import("db/dist").$Enums.ScopeType;
         scopeId: string;
-        level: import("db/dist").$Enums.CollationLevel;
         registeredVoters: number | null;
         accreditedVoters: number | null;
         votesCast: number | null;
@@ -646,14 +646,14 @@ export declare class CollationController {
         parentResultId: string | null;
     }>;
     submitResult(user: JwtPayload, id: string): Promise<{
-        status: import("db/dist").$Enums.CollationResultStatus;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        status: import("db/dist").$Enums.CollationResultStatus;
         campaignId: string;
+        level: import("db/dist").$Enums.CollationLevel;
         scopeType: import("db/dist").$Enums.ScopeType;
         scopeId: string;
-        level: import("db/dist").$Enums.CollationLevel;
         registeredVoters: number | null;
         accreditedVoters: number | null;
         votesCast: number | null;
@@ -669,14 +669,14 @@ export declare class CollationController {
         parentResultId: string | null;
     }>;
     attachEc8a(user: JwtPayload, id: string, dto: AttachEc8aPhotoDto): Promise<{
-        status: import("db/dist").$Enums.CollationResultStatus;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        status: import("db/dist").$Enums.CollationResultStatus;
         campaignId: string;
+        level: import("db/dist").$Enums.CollationLevel;
         scopeType: import("db/dist").$Enums.ScopeType;
         scopeId: string;
-        level: import("db/dist").$Enums.CollationLevel;
         registeredVoters: number | null;
         accreditedVoters: number | null;
         votesCast: number | null;
@@ -692,14 +692,14 @@ export declare class CollationController {
         parentResultId: string | null;
     }>;
     approveResult(user: JwtPayload, id: string, dto: ApproveCollationResultDto): Promise<{
-        status: import("db/dist").$Enums.CollationResultStatus;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        status: import("db/dist").$Enums.CollationResultStatus;
         campaignId: string;
+        level: import("db/dist").$Enums.CollationLevel;
         scopeType: import("db/dist").$Enums.ScopeType;
         scopeId: string;
-        level: import("db/dist").$Enums.CollationLevel;
         registeredVoters: number | null;
         accreditedVoters: number | null;
         votesCast: number | null;
@@ -715,14 +715,14 @@ export declare class CollationController {
         parentResultId: string | null;
     }>;
     rejectResult(user: JwtPayload, id: string, dto: RejectCollationResultDto): Promise<{
-        status: import("db/dist").$Enums.CollationResultStatus;
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        status: import("db/dist").$Enums.CollationResultStatus;
         campaignId: string;
+        level: import("db/dist").$Enums.CollationLevel;
         scopeType: import("db/dist").$Enums.ScopeType;
         scopeId: string;
-        level: import("db/dist").$Enums.CollationLevel;
         registeredVoters: number | null;
         accreditedVoters: number | null;
         votesCast: number | null;

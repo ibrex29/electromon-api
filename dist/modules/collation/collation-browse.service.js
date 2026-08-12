@@ -404,19 +404,13 @@ let CollationBrowseService = class CollationBrowseService {
         }
     }
     isScopedToPu(user) {
-        return (user.scopeType === shared_1.ScopeType.POLLING_UNIT ||
-            user.role === shared_1.CampaignRole.POLLING_UNIT_OFFICER ||
-            user.role === shared_1.CampaignRole.POLLING_AGENT);
+        return (user.scopeType === shared_1.ScopeType.POLLING_UNIT || user.role === shared_1.CampaignRole.POLLING_AGENT);
     }
     isScopedToWard(user) {
-        return (user.scopeType === shared_1.ScopeType.WARD ||
-            user.role === shared_1.CampaignRole.WARD_RA_OFFICER ||
-            user.role === shared_1.CampaignRole.WARD_COORDINATOR);
+        return (user.scopeType === shared_1.ScopeType.WARD || user.role === shared_1.CampaignRole.WARD_RA_OFFICER);
     }
     isScopedToLga(user) {
-        return (user.scopeType === shared_1.ScopeType.LGA ||
-            user.role === shared_1.CampaignRole.LGA_COLLATION_OFFICER ||
-            user.role === shared_1.CampaignRole.LGA_COORDINATOR);
+        return (user.scopeType === shared_1.ScopeType.LGA || user.role === shared_1.CampaignRole.LGA_COLLATION_OFFICER);
     }
 };
 exports.CollationBrowseService = CollationBrowseService;

@@ -27,6 +27,7 @@ function buildSwaggerDocument() {
         bearerFormat: 'JWT',
         description: 'Enter JWT access token from POST /auth/login',
     }, exports.SWAGGER_BEARER_AUTH)
+        .addTag('agents', 'Ward & PU agent account management (LGA)')
         .addTag('analytics', 'Campaign KPIs & performance rankings')
         .addTag('situation-room', 'Election day command dashboard')
         .addTag('field-reports', 'Field reporting from volunteers & agents')

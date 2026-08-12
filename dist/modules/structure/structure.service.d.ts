@@ -20,26 +20,26 @@ export declare class StructureService {
         };
     } & {
         id: string;
-        createdAt: Date;
         name: string;
         code: string;
+        createdAt: Date;
         updatedAt: Date;
     })[]>;
     getLgasByState(stateId: string): import("db/dist").Prisma.PrismaPromise<({
-        senatorialDistrict: {
-            id: string;
-            createdAt: Date;
-            name: string;
-            updatedAt: Date;
-            stateId: string;
-        } | null;
         _count: {
             wards: number;
         };
+        senatorialDistrict: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            stateId: string;
+        } | null;
     } & {
         id: string;
-        createdAt: Date;
         name: string;
+        createdAt: Date;
         updatedAt: Date;
         stateId: string;
         senatorialDistrictId: string | null;
@@ -51,28 +51,28 @@ export declare class StructureService {
         };
     } & {
         id: string;
-        createdAt: Date;
         name: string;
-        latitude: number | null;
-        longitude: number | null;
+        createdAt: Date;
         updatedAt: Date;
         registrationAreaCode: string | null;
         lgaId: string;
+        latitude: number | null;
+        longitude: number | null;
     })[]>;
     getPollingUnitsByWard(wardId: string): import("db/dist").Prisma.PrismaPromise<{
         id: string;
-        createdAt: Date;
         name: string;
-        status: import("db/dist").$Enums.PollingUnitStatus;
         code: string;
-        wardId: string;
+        createdAt: Date;
+        updatedAt: Date;
         latitude: number | null;
         longitude: number | null;
+        wardId: string;
         strengthAssessment: import("db/dist").$Enums.PollingUnitStrength | null;
+        status: import("db/dist").$Enums.PollingUnitStatus;
         assignedAgentId: string | null;
         historicalResults: import("db/dist/generated/runtime/client").JsonValue | null;
         notes: string | null;
-        updatedAt: Date;
     }[]>;
     getCoverageStats(campaignId: string): Promise<{
         campaignId: string;

@@ -27,11 +27,11 @@ export declare class SituationRoomController {
             lastName: string;
         };
     } & {
-        status: import("db/dist").$Enums.SituationStatus;
         id: string;
         createdAt: Date;
         latitude: number | null;
         longitude: number | null;
+        status: import("db/dist").$Enums.SituationStatus;
         notes: string | null;
         isUrgent: boolean;
         reportedById: string;
@@ -49,11 +49,11 @@ export declare class SituationRoomController {
             lastName: string;
         };
     } & {
-        status: import("db/dist").$Enums.SituationStatus;
         id: string;
         createdAt: Date;
         latitude: number | null;
         longitude: number | null;
+        status: import("db/dist").$Enums.SituationStatus;
         notes: string | null;
         isUrgent: boolean;
         reportedById: string;
@@ -71,11 +71,11 @@ export declare class SituationRoomController {
             lastName: string;
         };
     } & {
-        status: import("db/dist").$Enums.SituationStatus;
         id: string;
         createdAt: Date;
         latitude: number | null;
         longitude: number | null;
+        status: import("db/dist").$Enums.SituationStatus;
         notes: string | null;
         isUrgent: boolean;
         reportedById: string;
@@ -93,11 +93,11 @@ export declare class SituationRoomController {
             lastName: string;
         };
     } & {
-        status: import("db/dist").$Enums.SituationStatus;
         id: string;
         createdAt: Date;
         latitude: number | null;
         longitude: number | null;
+        status: import("db/dist").$Enums.SituationStatus;
         notes: string | null;
         isUrgent: boolean;
         reportedById: string;

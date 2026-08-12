@@ -22,8 +22,15 @@ let FieldReportsService = class FieldReportsService {
     include = {
         reporter: { select: { id: true, firstName: true, lastName: true } },
         handledBy: { select: { id: true, firstName: true, lastName: true } },
-        ward: { select: { id: true, name: true } },
-        pollingUnit: { select: { id: true, code: true, name: true } },
+        ward: { select: { id: true, name: true, lgaId: true } },
+        pollingUnit: {
+            select: {
+                id: true,
+                code: true,
+                name: true,
+                ward: { select: { id: true, name: true, lgaId: true } },
+            },
+        },
     };
     async assertCampaignAccess(userId, campaignId) {
         const membership = await this.prisma.campaignMembership.findFirst({
@@ -37,12 +44,39 @@ let FieldReportsService = class FieldReportsService {
     async list(user, query) {
         await this.assertCampaignAccess(user.sub, query.campaignId);
         const wardScopeId = (0, campaign_scope_1.getWardScopeId)(user);
+        const lgaScopeId = (0, campaign_scope_1.getLgaScopeId)(user);
         if (wardScopeId && query.wardId && query.wardId !== wardScopeId) {
             throw new common_1.ForbiddenException('You can only view incidents in your assigned ward');
         }
+        if (lgaScopeId && query.lgaId && query.lgaId !== lgaScopeId) {
+            throw new common_1.ForbiddenException('You can only view incidents in your assigned LGA');
+        }
         const effectiveWardId = wardScopeId ?? query.wardId;
+        const effectiveLgaId = wardScopeId ? undefined : lgaScopeId ?? query.lgaId;
         if (wardScopeId && query.pollingUnitId) {
             await (0, campaign_scope_1.assertPollingUnitInWard)(this.prisma, query.pollingUnitId, wardScopeId);
+        }
+        const and = [];
+        if (effectiveWardId) {
+            and.push({
+                OR: [{ wardId: effectiveWardId }, { pollingUnit: { wardId: effectiveWardId } }],
+            });
+        }
+        else if (effectiveLgaId) {
+            and.push({
+                OR: [
+                    { ward: { lgaId: effectiveLgaId } },
+                    { pollingUnit: { ward: { lgaId: effectiveLgaId } } },
+                ],
+            });
+        }
+        if (query.search) {
+            and.push({
+                OR: [
+                    { title: { contains: query.search, mode: 'insensitive' } },
+                    { description: { contains: query.search, mode: 'insensitive' } },
+                ],
+            });
         }
         const where = {
             campaignId: query.campaignId,
@@ -53,21 +87,13 @@ let FieldReportsService = class FieldReportsService {
             ...(query.isUrgent !== undefined && { isUrgent: query.isUrgent }),
             ...(query.pollingUnitId && { pollingUnitId: query.pollingUnitId }),
             ...(query.reportedById && { reportedById: query.reportedById }),
-            ...(effectiveWardId && {
-                OR: [{ wardId: effectiveWardId }, { pollingUnit: { wardId: effectiveWardId } }],
-            }),
-            ...(query.search && {
-                OR: [
-                    { title: { contains: query.search, mode: 'insensitive' } },
-                    { description: { contains: query.search, mode: 'insensitive' } },
-                ],
-            }),
+            ...(and.length ? { AND: and } : {}),
         };
         return this.prisma.fieldReport.findMany({
             where,
             include: this.include,
             orderBy: [{ isUrgent: 'desc' }, { createdAt: 'desc' }],
-            take: 100,
+            take: 200,
         });
     }
     async create(user, dto) {
@@ -115,21 +141,37 @@ let FieldReportsService = class FieldReportsService {
         });
     }
     async updateStatus(user, id, dto) {
-        const report = await this.prisma.fieldReport.findUnique({ where: { id } });
+        const report = await this.prisma.fieldReport.findUnique({
+            where: { id },
+            include: {
+                ward: { select: { id: true, lgaId: true } },
+                pollingUnit: { select: { wardId: true, ward: { select: { lgaId: true } } } },
+            },
+        });
         if (!report)
             throw new common_1.NotFoundException('Field report not found');
         await this.assertCampaignAccess(user.sub, report.campaignId);
+        const reportWardId = report.wardId ?? report.pollingUnit?.wardId ?? report.ward?.id;
+        const reportLgaId = report.ward?.lgaId ?? report.pollingUnit?.ward?.lgaId ?? undefined;
         if ((0, campaign_scope_1.isWardScopedUser)(user)) {
             const wardScopeId = (0, campaign_scope_1.getWardScopeId)(user);
-            const reportWardId = report.wardId ??
-                (report.pollingUnitId
-                    ? (await this.prisma.pollingUnit.findUnique({
-                        where: { id: report.pollingUnitId },
-                        select: { wardId: true },
-                    }))?.wardId
-                    : undefined);
             if (reportWardId !== wardScopeId) {
                 throw new common_1.ForbiddenException('You can only manage incidents in your assigned ward');
+            }
+        }
+        else if ((0, campaign_scope_1.isLgaScopedUser)(user)) {
+            const lgaScopeId = (0, campaign_scope_1.getLgaScopeId)(user);
+            if (reportLgaId && reportLgaId !== lgaScopeId) {
+                throw new common_1.ForbiddenException('You can only manage incidents in your assigned LGA');
+            }
+            if (!reportLgaId && reportWardId) {
+                const ward = await this.prisma.ward.findUnique({
+                    where: { id: reportWardId },
+                    select: { lgaId: true },
+                });
+                if (ward?.lgaId !== lgaScopeId) {
+                    throw new common_1.ForbiddenException('You can only manage incidents in your assigned LGA');
+                }
             }
         }
         if (dto.status !== shared_1.FieldReportStatus.ESCALATED &&

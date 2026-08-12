@@ -23,6 +23,7 @@ export declare class ListFieldReportsQueryDto {
     pollingUnitId?: string;
     reportedById?: string;
     wardId?: string;
+    lgaId?: string;
     status?: FieldReportStatus;
 }
 export declare class UpdateFieldReportStatusDto {

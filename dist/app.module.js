@@ -22,6 +22,7 @@ const metrics_controller_1 = require("./common/metrics/metrics.controller");
 const metrics_module_1 = require("./common/metrics/metrics.module");
 const prisma_module_1 = require("./common/prisma/prisma.module");
 const redis_module_1 = require("./common/redis/redis.module");
+const agents_module_1 = require("./modules/agents/agents.module");
 const auth_module_1 = require("./modules/auth/auth.module");
 const campaign_module_1 = require("./modules/campaign/campaign.module");
 const collation_module_1 = require("./modules/collation/collation.module");
@@ -52,6 +53,7 @@ exports.AppModule = AppModule = __decorate([
             metrics_module_1.MetricsModule,
             audit_module_1.AuditModule,
             auth_module_1.AuthModule,
+            agents_module_1.AgentsModule,
             campaign_module_1.CampaignModule,
             collation_module_1.CollationModule,
             structure_module_1.StructureModule,

@@ -165,21 +165,21 @@ export class CollationController {
   }
 
   @Get('lga/ward-submissions')
-  @Roles(CampaignRole.LGA_COLLATION_OFFICER, CampaignRole.LGA_COORDINATOR)
+  @Roles(CampaignRole.LGA_COLLATION_OFFICER)
   @ApiOperation({ summary: 'Ward collation submissions in the LGA officer scope' })
   listLgaWardSubmissions(@CurrentUser() user: JwtPayload) {
     return this.collationService.listLgaWardSubmissions(user);
   }
 
   @Get('lga/wards/:wardId/pu-results')
-  @Roles(CampaignRole.LGA_COLLATION_OFFICER, CampaignRole.LGA_COORDINATOR)
+  @Roles(CampaignRole.LGA_COLLATION_OFFICER)
   @ApiOperation({ summary: 'PU results within a ward (read-only for LGA review)' })
   listLgaWardPuResults(@CurrentUser() user: JwtPayload, @Param('wardId') wardId: string) {
     return this.collationService.listLgaWardPuResults(user, wardId);
   }
 
   @Get('lga/polling-units/:puId/result')
-  @Roles(CampaignRole.LGA_COLLATION_OFFICER, CampaignRole.LGA_COORDINATOR)
+  @Roles(CampaignRole.LGA_COLLATION_OFFICER)
   @ApiOperation({ summary: 'Single PU collation result in the LGA (read-only)' })
   getLgaPuResult(@CurrentUser() user: JwtPayload, @Param('puId') puId: string) {
     return this.collationService.getLgaPuResult(user, puId);
@@ -196,7 +196,7 @@ export class CollationController {
   }
 
   @Get('ward/pu-submissions')
-  @Roles(CampaignRole.WARD_RA_OFFICER, CampaignRole.WARD_COORDINATOR)
+  @Roles(CampaignRole.WARD_RA_OFFICER)
   @ApiOperation({ summary: 'Paginated PU collation submissions in the ward officer scope' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })

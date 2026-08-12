@@ -10,25 +10,25 @@ export declare class LocalStrategy extends LocalStrategy_base {
         memberships: {
             id: string;
             createdAt: Date;
-            updatedAt: Date;
-            isActive: boolean;
             userId: string;
             campaignId: string;
             role: import("db/dist").$Enums.CampaignRole;
-            scopeType: import("db/dist").$Enums.ScopeType | null;
             scopeId: string | null;
+            isActive: boolean;
+            scopeType: import("db/dist").$Enums.ScopeType | null;
+            updatedAt: Date;
         }[];
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
-        email: string;
-        phoneNumber: string | null;
-        passwordHash: string;
         firstName: string;
         lastName: string;
-        otherNames: string | null;
+        phoneNumber: string | null;
+        email: string;
         isActive: boolean;
+        updatedAt: Date;
+        passwordHash: string;
+        otherNames: string | null;
         mfaEnabled: boolean;
         mfaSecret: string | null;
     }>;

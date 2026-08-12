@@ -12,18 +12,18 @@ export declare class CampaignController {
         state: {
             id: string;
             createdAt: Date;
-            updatedAt: Date;
             name: string;
+            updatedAt: Date;
             code: string;
         };
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
-        isActive: boolean;
         name: string;
-        slug: string;
+        isActive: boolean;
+        updatedAt: Date;
         stateId: string;
+        slug: string;
         clientPartyCode: string | null;
         trackedParties: import("db/dist/generated/runtime/client").JsonValue | null;
     })[]>;
@@ -32,8 +32,8 @@ export declare class CampaignController {
             senatorialDistricts: {
                 id: string;
                 createdAt: Date;
-                updatedAt: Date;
                 name: string;
+                updatedAt: Date;
                 stateId: string;
             }[];
             lgas: ({
@@ -44,9 +44,9 @@ export declare class CampaignController {
                 } & {
                     id: string;
                     createdAt: Date;
-                    updatedAt: Date;
                     name: string;
                     lgaId: string;
+                    updatedAt: Date;
                     registrationAreaCode: string | null;
                     latitude: number | null;
                     longitude: number | null;
@@ -54,26 +54,26 @@ export declare class CampaignController {
             } & {
                 id: string;
                 createdAt: Date;
-                updatedAt: Date;
                 name: string;
+                updatedAt: Date;
                 stateId: string;
                 senatorialDistrictId: string | null;
             })[];
         } & {
             id: string;
             createdAt: Date;
-            updatedAt: Date;
             name: string;
+            updatedAt: Date;
             code: string;
         };
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
-        isActive: boolean;
         name: string;
-        slug: string;
+        isActive: boolean;
+        updatedAt: Date;
         stateId: string;
+        slug: string;
         clientPartyCode: string | null;
         trackedParties: import("db/dist/generated/runtime/client").JsonValue | null;
     }>;

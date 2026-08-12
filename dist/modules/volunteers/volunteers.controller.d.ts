@@ -16,14 +16,14 @@ export declare class VolunteersController {
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
-        email: string | null;
-        phoneNumber: string;
+        campaignId: string;
+        wardId: string | null;
+        role: string | null;
         firstName: string;
         lastName: string;
-        campaignId: string;
-        role: string | null;
-        wardId: string | null;
+        phoneNumber: string;
+        email: string | null;
+        updatedAt: Date;
         coordinatorId: string | null;
         isVerified: boolean;
         performanceScore: number;
@@ -40,14 +40,14 @@ export declare class VolunteersController {
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
-        email: string | null;
-        phoneNumber: string;
+        campaignId: string;
+        wardId: string | null;
+        role: string | null;
         firstName: string;
         lastName: string;
-        campaignId: string;
-        role: string | null;
-        wardId: string | null;
+        phoneNumber: string;
+        email: string | null;
+        updatedAt: Date;
         coordinatorId: string | null;
         isVerified: boolean;
         performanceScore: number;
@@ -64,14 +64,14 @@ export declare class VolunteersController {
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
-        email: string | null;
-        phoneNumber: string;
+        campaignId: string;
+        wardId: string | null;
+        role: string | null;
         firstName: string;
         lastName: string;
-        campaignId: string;
-        role: string | null;
-        wardId: string | null;
+        phoneNumber: string;
+        email: string | null;
+        updatedAt: Date;
         coordinatorId: string | null;
         isVerified: boolean;
         performanceScore: number;
@@ -88,14 +88,14 @@ export declare class VolunteersController {
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
-        email: string | null;
-        phoneNumber: string;
+        campaignId: string;
+        wardId: string | null;
+        role: string | null;
         firstName: string;
         lastName: string;
-        campaignId: string;
-        role: string | null;
-        wardId: string | null;
+        phoneNumber: string;
+        email: string | null;
+        updatedAt: Date;
         coordinatorId: string | null;
         isVerified: boolean;
         performanceScore: number;

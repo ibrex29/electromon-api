@@ -4,15 +4,15 @@ export declare class StructureController {
     constructor(structureService: StructureService);
     getStates(): import("db/dist").Prisma.PrismaPromise<({
         _count: {
-            campaigns: number;
             lgas: number;
+            campaigns: number;
         };
     } & {
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         code: string;
+        createdAt: Date;
+        updatedAt: Date;
     })[]>;
     getLgas(stateId: string): import("db/dist").Prisma.PrismaPromise<({
         _count: {
@@ -20,45 +20,45 @@ export declare class StructureController {
         };
         senatorialDistrict: {
             id: string;
+            name: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string;
             stateId: string;
         } | null;
     } & {
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         stateId: string;
         senatorialDistrictId: string | null;
     })[]>;
     getWards(lgaId: string): import("db/dist").Prisma.PrismaPromise<({
         _count: {
-            volunteers: number;
             pollingUnits: number;
+            volunteers: number;
         };
     } & {
         id: string;
+        name: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
-        lgaId: string;
         registrationAreaCode: string | null;
+        lgaId: string;
         latitude: number | null;
         longitude: number | null;
     })[]>;
     getPollingUnits(wardId: string): import("db/dist").Prisma.PrismaPromise<{
-        status: import("db/dist").$Enums.PollingUnitStatus;
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
         name: string;
         code: string;
+        createdAt: Date;
+        updatedAt: Date;
         latitude: number | null;
         longitude: number | null;
         wardId: string;
         strengthAssessment: import("db/dist").$Enums.PollingUnitStrength | null;
+        status: import("db/dist").$Enums.PollingUnitStatus;
         assignedAgentId: string | null;
         historicalResults: import("db/dist/generated/runtime/client").JsonValue | null;
         notes: string | null;

@@ -55,8 +55,8 @@ export class CommitmentsController {
   @Post()
   @Roles(
     CampaignRole.CAMPAIGN_DIRECTOR,
-    CampaignRole.STATE_COORDINATOR,
-    CampaignRole.LGA_COORDINATOR,
+    CampaignRole.STATE_COLLATION_OFFICER,
+    CampaignRole.LGA_COLLATION_OFFICER,
     CampaignRole.SUPPORT_GROUP_LEADER,
   )
   @AuditAction('commitment.create')
@@ -69,8 +69,8 @@ export class CommitmentsController {
   @Patch(':id')
   @Roles(
     CampaignRole.CAMPAIGN_DIRECTOR,
-    CampaignRole.STATE_COORDINATOR,
-    CampaignRole.LGA_COORDINATOR,
+    CampaignRole.STATE_COLLATION_OFFICER,
+    CampaignRole.LGA_COLLATION_OFFICER,
     CampaignRole.SUPPORT_GROUP_LEADER,
   )
   @AuditAction('commitment.update')
@@ -85,7 +85,7 @@ export class CommitmentsController {
   }
 
   @Delete(':id')
-  @Roles(CampaignRole.CAMPAIGN_DIRECTOR, CampaignRole.STATE_COORDINATOR)
+  @Roles(CampaignRole.CAMPAIGN_DIRECTOR, CampaignRole.STATE_COLLATION_OFFICER)
   @AuditAction('commitment.delete')
   @ApiOperation({ summary: 'Delete a commitment' })
   @ApiOkResponse({ type: MessageResponseDto })

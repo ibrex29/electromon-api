@@ -517,25 +517,19 @@ export class CollationBrowseService {
 
   private isScopedToPu(user: JwtPayload) {
     return (
-      user.scopeType === ScopeType.POLLING_UNIT ||
-      user.role === CampaignRole.POLLING_UNIT_OFFICER ||
-      user.role === CampaignRole.POLLING_AGENT
+      user.scopeType === ScopeType.POLLING_UNIT || user.role === CampaignRole.POLLING_AGENT
     );
   }
 
   private isScopedToWard(user: JwtPayload) {
     return (
-      user.scopeType === ScopeType.WARD ||
-      user.role === CampaignRole.WARD_RA_OFFICER ||
-      user.role === CampaignRole.WARD_COORDINATOR
+      user.scopeType === ScopeType.WARD || user.role === CampaignRole.WARD_RA_OFFICER
     );
   }
 
   private isScopedToLga(user: JwtPayload) {
     return (
-      user.scopeType === ScopeType.LGA ||
-      user.role === CampaignRole.LGA_COLLATION_OFFICER ||
-      user.role === CampaignRole.LGA_COORDINATOR
+      user.scopeType === ScopeType.LGA || user.role === CampaignRole.LGA_COLLATION_OFFICER
     );
   }
 }

@@ -84,7 +84,7 @@ __decorate([
 ], SituationRoomController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Post)('updates'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COORDINATOR, shared_1.CampaignRole.LGA_COORDINATOR, shared_1.CampaignRole.WARD_COORDINATOR, shared_1.CampaignRole.POLLING_UNIT_OFFICER, shared_1.CampaignRole.POLLING_AGENT_COORDINATOR, shared_1.CampaignRole.POLLING_AGENT),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.WARD_RA_OFFICER, shared_1.CampaignRole.POLLING_AGENT_COORDINATOR, shared_1.CampaignRole.POLLING_AGENT),
     (0, audit_decorators_1.AuditAction)('situation_update.create'),
     (0, swagger_1.ApiOperation)({ summary: 'Post a situation update from the field' }),
     (0, swagger_1.ApiCreatedResponse)({ type: situation_update_response_dto_1.SituationUpdateResponseDto }),
@@ -96,7 +96,7 @@ __decorate([
 ], SituationRoomController.prototype, "create", null);
 __decorate([
     (0, common_1.Patch)('updates/:id'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COORDINATOR, shared_1.CampaignRole.LGA_COORDINATOR, shared_1.CampaignRole.WARD_COORDINATOR, shared_1.CampaignRole.POLLING_AGENT_COORDINATOR, shared_1.CampaignRole.POLLING_AGENT),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.WARD_RA_OFFICER, shared_1.CampaignRole.POLLING_AGENT_COORDINATOR, shared_1.CampaignRole.POLLING_AGENT),
     (0, audit_decorators_1.AuditAction)('situation_update.update'),
     (0, swagger_1.ApiOperation)({ summary: 'Update a situation update' }),
     (0, swagger_1.ApiOkResponse)({ type: situation_update_response_dto_1.SituationUpdateResponseDto }),
@@ -109,7 +109,7 @@ __decorate([
 ], SituationRoomController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)('updates/:id'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COORDINATOR),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER),
     (0, audit_decorators_1.AuditAction)('situation_update.delete'),
     (0, swagger_1.ApiOperation)({ summary: 'Delete a situation update' }),
     (0, swagger_1.ApiQuery)({ name: 'campaignId', required: true }),

@@ -61,9 +61,9 @@ export class PollingUnitsController {
   @Post()
   @Roles(
     CampaignRole.CAMPAIGN_DIRECTOR,
-    CampaignRole.STATE_COORDINATOR,
-    CampaignRole.LGA_COORDINATOR,
-    CampaignRole.WARD_COORDINATOR,
+    CampaignRole.STATE_COLLATION_OFFICER,
+    CampaignRole.LGA_COLLATION_OFFICER,
+    CampaignRole.WARD_RA_OFFICER,
     CampaignRole.POLLING_AGENT_COORDINATOR,
   )
   @AuditAction('polling_unit.create')
@@ -76,9 +76,9 @@ export class PollingUnitsController {
   @Patch(':id')
   @Roles(
     CampaignRole.CAMPAIGN_DIRECTOR,
-    CampaignRole.STATE_COORDINATOR,
-    CampaignRole.LGA_COORDINATOR,
-    CampaignRole.WARD_COORDINATOR,
+    CampaignRole.STATE_COLLATION_OFFICER,
+    CampaignRole.LGA_COLLATION_OFFICER,
+    CampaignRole.WARD_RA_OFFICER,
     CampaignRole.POLLING_AGENT_COORDINATOR,
     CampaignRole.POLLING_AGENT,
   )
@@ -94,7 +94,7 @@ export class PollingUnitsController {
   }
 
   @Delete(':id')
-  @Roles(CampaignRole.CAMPAIGN_DIRECTOR, CampaignRole.STATE_COORDINATOR)
+  @Roles(CampaignRole.CAMPAIGN_DIRECTOR, CampaignRole.STATE_COLLATION_OFFICER)
   @AuditAction('polling_unit.delete')
   @ApiOperation({ summary: 'Delete a polling unit' })
   @ApiQuery({ name: 'campaignId', required: true })

@@ -4,13 +4,13 @@ exports.isWardScopedUser = isWardScopedUser;
 exports.getWardScopeId = getWardScopeId;
 exports.requireWardScopeId = requireWardScopeId;
 exports.assertWardAccess = assertWardAccess;
+exports.isLgaScopedUser = isLgaScopedUser;
+exports.getLgaScopeId = getLgaScopeId;
 exports.assertPollingUnitInWard = assertPollingUnitInWard;
 const common_1 = require("@nestjs/common");
 const shared_1 = require("@electromon/shared");
 function isWardScopedUser(user) {
-    return (user.scopeType === shared_1.ScopeType.WARD ||
-        user.role === shared_1.CampaignRole.WARD_RA_OFFICER ||
-        user.role === shared_1.CampaignRole.WARD_COORDINATOR);
+    return (user.scopeType === shared_1.ScopeType.WARD || user.role === shared_1.CampaignRole.WARD_RA_OFFICER);
 }
 function getWardScopeId(user) {
     if (!isWardScopedUser(user))
@@ -29,6 +29,14 @@ function assertWardAccess(user, wardId) {
     if (scopeId && scopeId !== wardId) {
         throw new common_1.ForbiddenException('You can only access your assigned ward');
     }
+}
+function isLgaScopedUser(user) {
+    return (user.scopeType === shared_1.ScopeType.LGA || user.role === shared_1.CampaignRole.LGA_COLLATION_OFFICER);
+}
+function getLgaScopeId(user) {
+    if (!isLgaScopedUser(user))
+        return undefined;
+    return user.scopeId ?? undefined;
 }
 async function assertPollingUnitInWard(prisma, pollingUnitId, wardId) {
     const unit = await prisma.pollingUnit.findFirst({

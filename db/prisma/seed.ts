@@ -190,11 +190,11 @@ async function main() {
 
   const collationUsers = [
     {
-      email: 'pu.officer@electromon.ng',
+      email: 'pu.agent@electromon.ng',
       phoneNumber: '+2348000000002',
       firstName: 'PU',
-      lastName: 'Officer',
-      role: CampaignRole.POLLING_UNIT_OFFICER,
+      lastName: 'Agent',
+      role: CampaignRole.POLLING_AGENT,
       scopeType: ScopeType.POLLING_UNIT,
       scopeId: pu001.id,
     },
@@ -282,7 +282,7 @@ async function main() {
     hadejia.id,
     PARTY_CODES,
     {
-      puOfficerId: seededOfficers['pu.officer@electromon.ng'],
+      puOfficerId: seededOfficers['pu.agent@electromon.ng'],
       wardOfficerId: seededOfficers['ward.officer@electromon.ng'],
       lgaOfficerId: seededOfficers['lga.officer@electromon.ng'],
     },
@@ -484,7 +484,7 @@ async function main() {
   const fieldReportSamples = [
     {
       campaignId: campaign.id,
-      reportedById: seededOfficers['pu.officer@electromon.ng'] ?? director.id,
+      reportedById: seededOfficers['pu.agent@electromon.ng'] ?? director.id,
       type: FieldReportType.CAMPAIGN_PROGRESS,
       title: 'Strong turnout in ATAFI ward',
       description:
@@ -496,7 +496,7 @@ async function main() {
     },
     {
       campaignId: campaign.id,
-      reportedById: seededOfficers['pu.officer@electromon.ng'] ?? director.id,
+      reportedById: seededOfficers['pu.agent@electromon.ng'] ?? director.id,
       type: FieldReportType.INCIDENT,
       incidentType: IncidentType.UNAUTHORIZED_PERSONNEL,
       incidentSeverity: IncidentSeverity.HIGH,
@@ -510,7 +510,7 @@ async function main() {
     },
     {
       campaignId: campaign.id,
-      reportedById: seededOfficers['pu.officer@electromon.ng'] ?? director.id,
+      reportedById: seededOfficers['pu.agent@electromon.ng'] ?? director.id,
       type: FieldReportType.INCIDENT,
       incidentType: IncidentType.BVAS_MALFUNCTION,
       incidentSeverity: IncidentSeverity.MEDIUM,
@@ -523,7 +523,7 @@ async function main() {
     },
     {
       campaignId: campaign.id,
-      reportedById: seededOfficers['pu.officer@electromon.ng'] ?? director.id,
+      reportedById: seededOfficers['pu.agent@electromon.ng'] ?? director.id,
       type: FieldReportType.INCIDENT,
       incidentType: IncidentType.VOTE_BUYING,
       incidentSeverity: IncidentSeverity.CRITICAL,
@@ -537,7 +537,7 @@ async function main() {
     },
     {
       campaignId: campaign.id,
-      reportedById: seededOfficers['pu.officer@electromon.ng'] ?? director.id,
+      reportedById: seededOfficers['pu.agent@electromon.ng'] ?? director.id,
       type: FieldReportType.INCIDENT,
       incidentType: IncidentType.LATE_OR_FAILED_OPENING,
       incidentSeverity: IncidentSeverity.LOW,
@@ -581,7 +581,7 @@ async function main() {
   console.log('  Password for all accounts: ChangeMe123!');
   console.log('');
   console.log('  Collation hierarchy accounts (login with phone + password):');
-  console.log('    1. PU Officer:        +2348000000002  (17-13-01-001 ATAFI/RAMIN ATAFI)');
+  console.log('    1. PU Agent:              +2348000000002  (17-13-01-001 ATAFI/RAMIN ATAFI)');
   console.log('    2. Ward/RA Officer:   +2348000000003  (ATAFI ward)');
   console.log('    3. LGA Officer:       +2348000000004  (Hadejia LGA)');
   console.log('    4. State Officer:     +2348000000005  (Jigawa State)');
@@ -590,7 +590,7 @@ async function main() {
   console.log('    (also accepted as 080… form, e.g. 08000000004)');
   console.log('');
   console.log('  Suggested test cases:');
-  console.log('    PU officer  → draft/submit 17-13-01-001, upload EC8A, report incidents');
+  console.log('    PU agent   → draft/submit 17-13-01-001, upload EC8A, report incidents');
   console.log('    Ward officer → ATAFI: await approval PUs, returned PU, LGA-returned ward banner');
   console.log('    LGA officer  → filters (awaiting / approved / returned), approve only when PUs complete');
   console.log('                → incomplete ward cannot be approved until every PU is approved');

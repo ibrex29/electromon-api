@@ -70,7 +70,7 @@ __decorate([
 ], CommitmentsController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Post)(),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COORDINATOR, shared_1.CampaignRole.LGA_COORDINATOR, shared_1.CampaignRole.SUPPORT_GROUP_LEADER),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.SUPPORT_GROUP_LEADER),
     (0, audit_decorators_1.AuditAction)('commitment.create'),
     (0, swagger_1.ApiOperation)({ summary: 'Create a new commitment' }),
     (0, swagger_1.ApiCreatedResponse)({ type: commitment_response_dto_1.CommitmentResponseDto }),
@@ -82,7 +82,7 @@ __decorate([
 ], CommitmentsController.prototype, "create", null);
 __decorate([
     (0, common_1.Patch)(':id'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COORDINATOR, shared_1.CampaignRole.LGA_COORDINATOR, shared_1.CampaignRole.SUPPORT_GROUP_LEADER),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.SUPPORT_GROUP_LEADER),
     (0, audit_decorators_1.AuditAction)('commitment.update'),
     (0, swagger_1.ApiOperation)({ summary: 'Update a commitment' }),
     (0, swagger_1.ApiOkResponse)({ type: commitment_response_dto_1.CommitmentResponseDto }),
@@ -95,7 +95,7 @@ __decorate([
 ], CommitmentsController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COORDINATOR),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER),
     (0, audit_decorators_1.AuditAction)('commitment.delete'),
     (0, swagger_1.ApiOperation)({ summary: 'Delete a commitment' }),
     (0, swagger_1.ApiOkResponse)({ type: api_response_dto_1.MessageResponseDto }),

@@ -72,7 +72,7 @@ __decorate([
 ], PollingUnitsController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Post)(),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COORDINATOR, shared_1.CampaignRole.LGA_COORDINATOR, shared_1.CampaignRole.WARD_COORDINATOR, shared_1.CampaignRole.POLLING_AGENT_COORDINATOR),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.WARD_RA_OFFICER, shared_1.CampaignRole.POLLING_AGENT_COORDINATOR),
     (0, audit_decorators_1.AuditAction)('polling_unit.create'),
     (0, swagger_1.ApiOperation)({ summary: 'Register a polling unit' }),
     (0, swagger_1.ApiCreatedResponse)({ type: polling_unit_response_dto_1.PollingUnitResponseDto }),
@@ -84,7 +84,7 @@ __decorate([
 ], PollingUnitsController.prototype, "create", null);
 __decorate([
     (0, common_1.Patch)(':id'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COORDINATOR, shared_1.CampaignRole.LGA_COORDINATOR, shared_1.CampaignRole.WARD_COORDINATOR, shared_1.CampaignRole.POLLING_AGENT_COORDINATOR, shared_1.CampaignRole.POLLING_AGENT),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.WARD_RA_OFFICER, shared_1.CampaignRole.POLLING_AGENT_COORDINATOR, shared_1.CampaignRole.POLLING_AGENT),
     (0, audit_decorators_1.AuditAction)('polling_unit.update'),
     (0, swagger_1.ApiOperation)({ summary: 'Update polling unit intelligence' }),
     (0, swagger_1.ApiOkResponse)({ type: polling_unit_response_dto_1.PollingUnitResponseDto }),
@@ -97,7 +97,7 @@ __decorate([
 ], PollingUnitsController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COORDINATOR),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER),
     (0, audit_decorators_1.AuditAction)('polling_unit.delete'),
     (0, swagger_1.ApiOperation)({ summary: 'Delete a polling unit' }),
     (0, swagger_1.ApiQuery)({ name: 'campaignId', required: true }),

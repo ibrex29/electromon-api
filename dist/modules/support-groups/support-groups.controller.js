@@ -70,7 +70,7 @@ __decorate([
 ], SupportGroupsController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Post)(),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COORDINATOR, shared_1.CampaignRole.LGA_COORDINATOR),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER),
     (0, audit_decorators_1.AuditAction)('support_group.create'),
     (0, swagger_1.ApiOperation)({ summary: 'Register a new support group' }),
     (0, swagger_1.ApiCreatedResponse)({ type: support_group_response_dto_1.SupportGroupResponseDto }),
@@ -82,7 +82,7 @@ __decorate([
 ], SupportGroupsController.prototype, "create", null);
 __decorate([
     (0, common_1.Patch)(':id'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COORDINATOR, shared_1.CampaignRole.LGA_COORDINATOR),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER),
     (0, audit_decorators_1.AuditAction)('support_group.update'),
     (0, swagger_1.ApiOperation)({ summary: 'Update a support group' }),
     (0, swagger_1.ApiOkResponse)({ type: support_group_response_dto_1.SupportGroupResponseDto }),
@@ -95,7 +95,7 @@ __decorate([
 ], SupportGroupsController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COORDINATOR),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER),
     (0, audit_decorators_1.AuditAction)('support_group.delete'),
     (0, swagger_1.ApiOperation)({ summary: 'Delete a support group' }),
     (0, swagger_1.ApiOkResponse)({ type: api_response_dto_1.MessageResponseDto }),

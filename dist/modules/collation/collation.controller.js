@@ -231,7 +231,7 @@ __decorate([
 ], CollationController.prototype, "listPending", null);
 __decorate([
     (0, common_1.Get)('lga/ward-submissions'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COORDINATOR),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.LGA_COLLATION_OFFICER),
     (0, swagger_1.ApiOperation)({ summary: 'Ward collation submissions in the LGA officer scope' }),
     openapi.ApiResponse({ status: 200 }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
@@ -241,7 +241,7 @@ __decorate([
 ], CollationController.prototype, "listLgaWardSubmissions", null);
 __decorate([
     (0, common_1.Get)('lga/wards/:wardId/pu-results'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COORDINATOR),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.LGA_COLLATION_OFFICER),
     (0, swagger_1.ApiOperation)({ summary: 'PU results within a ward (read-only for LGA review)' }),
     openapi.ApiResponse({ status: 200, type: [Object] }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
@@ -252,7 +252,7 @@ __decorate([
 ], CollationController.prototype, "listLgaWardPuResults", null);
 __decorate([
     (0, common_1.Get)('lga/polling-units/:puId/result'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COORDINATOR),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.LGA_COLLATION_OFFICER),
     (0, swagger_1.ApiOperation)({ summary: 'Single PU collation result in the LGA (read-only)' }),
     openapi.ApiResponse({ status: 200, type: Object }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
@@ -274,7 +274,7 @@ __decorate([
 ], CollationController.prototype, "approveAllLgaWardResults", null);
 __decorate([
     (0, common_1.Get)('ward/pu-submissions'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.WARD_RA_OFFICER, shared_1.CampaignRole.WARD_COORDINATOR),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.WARD_RA_OFFICER),
     (0, swagger_1.ApiOperation)({ summary: 'Paginated PU collation submissions in the ward officer scope' }),
     (0, swagger_1.ApiQuery)({ name: 'page', required: false, type: Number }),
     (0, swagger_1.ApiQuery)({ name: 'limit', required: false, type: Number }),

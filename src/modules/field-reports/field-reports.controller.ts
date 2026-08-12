@@ -30,10 +30,9 @@ export class FieldReportsController {
   @Post()
   @Roles(
     CampaignRole.CAMPAIGN_DIRECTOR,
-    CampaignRole.STATE_COORDINATOR,
-    CampaignRole.LGA_COORDINATOR,
-    CampaignRole.WARD_COORDINATOR,
-    CampaignRole.POLLING_UNIT_OFFICER,
+    CampaignRole.STATE_COLLATION_OFFICER,
+    CampaignRole.LGA_COLLATION_OFFICER,
+    CampaignRole.WARD_RA_OFFICER,
     CampaignRole.POLLING_AGENT,
     CampaignRole.VOLUNTEER,
     CampaignRole.VOLUNTEER_COORDINATOR,
@@ -48,9 +47,8 @@ export class FieldReportsController {
   @Patch(':id/status')
   @Roles(
     CampaignRole.CAMPAIGN_DIRECTOR,
-    CampaignRole.STATE_COORDINATOR,
-    CampaignRole.LGA_COORDINATOR,
-    CampaignRole.WARD_COORDINATOR,
+    CampaignRole.STATE_COLLATION_OFFICER,
+    CampaignRole.LGA_COLLATION_OFFICER,
     CampaignRole.WARD_RA_OFFICER,
   )
   @AuditAction('field_report.update_status')

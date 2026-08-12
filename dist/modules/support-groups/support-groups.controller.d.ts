@@ -12,10 +12,10 @@ export declare class SupportGroupsController {
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
-        name: string;
         campaignId: string;
+        name: string;
         lgaId: string | null;
+        updatedAt: Date;
         latitude: number | null;
         longitude: number | null;
         category: import("db/dist").$Enums.SupportGroupCategory;
@@ -35,10 +35,10 @@ export declare class SupportGroupsController {
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
-        name: string;
         campaignId: string;
+        name: string;
         lgaId: string | null;
+        updatedAt: Date;
         latitude: number | null;
         longitude: number | null;
         category: import("db/dist").$Enums.SupportGroupCategory;
@@ -58,10 +58,10 @@ export declare class SupportGroupsController {
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
-        name: string;
         campaignId: string;
+        name: string;
         lgaId: string | null;
+        updatedAt: Date;
         latitude: number | null;
         longitude: number | null;
         category: import("db/dist").$Enums.SupportGroupCategory;
@@ -81,10 +81,10 @@ export declare class SupportGroupsController {
     } & {
         id: string;
         createdAt: Date;
-        updatedAt: Date;
-        name: string;
         campaignId: string;
+        name: string;
         lgaId: string | null;
+        updatedAt: Date;
         latitude: number | null;
         longitude: number | null;
         category: import("db/dist").$Enums.SupportGroupCategory;

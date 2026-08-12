@@ -3,9 +3,7 @@ import { CampaignRole, JwtPayload, ScopeType } from '@electromon/shared';
 
 export function isWardScopedUser(user: JwtPayload): boolean {
   return (
-    user.scopeType === ScopeType.WARD ||
-    user.role === CampaignRole.WARD_RA_OFFICER ||
-    user.role === CampaignRole.WARD_COORDINATOR
+    user.scopeType === ScopeType.WARD || user.role === CampaignRole.WARD_RA_OFFICER
   );
 }
 
@@ -27,6 +25,17 @@ export function assertWardAccess(user: JwtPayload, wardId: string) {
   if (scopeId && scopeId !== wardId) {
     throw new ForbiddenException('You can only access your assigned ward');
   }
+}
+
+export function isLgaScopedUser(user: JwtPayload): boolean {
+  return (
+    user.scopeType === ScopeType.LGA || user.role === CampaignRole.LGA_COLLATION_OFFICER
+  );
+}
+
+export function getLgaScopeId(user: JwtPayload): string | undefined {
+  if (!isLgaScopedUser(user)) return undefined;
+  return user.scopeId ?? undefined;
 }
 
 export async function assertPollingUnitInWard(

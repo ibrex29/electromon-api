@@ -36,9 +36,9 @@ export declare class AnalyticsController {
         };
         topVolunteers: {
             id: string;
+            role: string | null;
             firstName: string;
             lastName: string;
-            role: string | null;
             performanceScore: number;
         }[];
         recentActivity: ({

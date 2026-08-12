@@ -10,10 +10,16 @@ export declare class FieldReportsService {
         ward: {
             id: string;
             name: string;
+            lgaId: string;
         } | null;
         pollingUnit: {
             id: string;
             name: string;
+            ward: {
+                id: string;
+                name: string;
+                lgaId: string;
+            };
             code: string;
         } | null;
         reporter: {
@@ -30,14 +36,14 @@ export declare class FieldReportsService {
         id: string;
         createdAt: Date;
         campaignId: string;
-        status: import("@electromon/db").$Enums.FieldReportStatus;
+        type: import("@electromon/db").$Enums.FieldReportType;
+        description: string;
+        title: string;
         wardId: string | null;
+        updatedAt: Date;
         latitude: number | null;
         longitude: number | null;
-        updatedAt: Date;
-        description: string;
-        type: import("@electromon/db").$Enums.FieldReportType;
-        title: string;
+        status: import("@electromon/db").$Enums.FieldReportStatus;
         isUrgent: boolean;
         reportedById: string;
         incidentType: import("@electromon/db").$Enums.IncidentType | null;
@@ -52,10 +58,16 @@ export declare class FieldReportsService {
         ward: {
             id: string;
             name: string;
+            lgaId: string;
         } | null;
         pollingUnit: {
             id: string;
             name: string;
+            ward: {
+                id: string;
+                name: string;
+                lgaId: string;
+            };
             code: string;
         } | null;
         reporter: {
@@ -72,14 +84,14 @@ export declare class FieldReportsService {
         id: string;
         createdAt: Date;
         campaignId: string;
-        status: import("@electromon/db").$Enums.FieldReportStatus;
+        type: import("@electromon/db").$Enums.FieldReportType;
+        description: string;
+        title: string;
         wardId: string | null;
+        updatedAt: Date;
         latitude: number | null;
         longitude: number | null;
-        updatedAt: Date;
-        description: string;
-        type: import("@electromon/db").$Enums.FieldReportType;
-        title: string;
+        status: import("@electromon/db").$Enums.FieldReportStatus;
         isUrgent: boolean;
         reportedById: string;
         incidentType: import("@electromon/db").$Enums.IncidentType | null;
@@ -94,10 +106,16 @@ export declare class FieldReportsService {
         ward: {
             id: string;
             name: string;
+            lgaId: string;
         } | null;
         pollingUnit: {
             id: string;
             name: string;
+            ward: {
+                id: string;
+                name: string;
+                lgaId: string;
+            };
             code: string;
         } | null;
         reporter: {
@@ -114,14 +132,14 @@ export declare class FieldReportsService {
         id: string;
         createdAt: Date;
         campaignId: string;
-        status: import("@electromon/db").$Enums.FieldReportStatus;
+        type: import("@electromon/db").$Enums.FieldReportType;
+        description: string;
+        title: string;
         wardId: string | null;
+        updatedAt: Date;
         latitude: number | null;
         longitude: number | null;
-        updatedAt: Date;
-        description: string;
-        type: import("@electromon/db").$Enums.FieldReportType;
-        title: string;
+        status: import("@electromon/db").$Enums.FieldReportStatus;
         isUrgent: boolean;
         reportedById: string;
         incidentType: import("@electromon/db").$Enums.IncidentType | null;

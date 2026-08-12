@@ -1,13 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MFA_REQUIRED_ROLES = exports.SituationStatus = exports.PollingUnitStatus = exports.PollingUnitStrength = exports.FieldReportStatus = exports.IncidentSeverity = exports.IncidentType = exports.FieldReportType = exports.VerificationStatus = exports.SupportGroupCategory = exports.ScopeType = exports.CampaignRole = void 0;
+exports.MFA_REQUIRED_ROLES = exports.SituationStatus = exports.PollingUnitStatus = exports.PollingUnitStrength = exports.FieldReportStatus = exports.IncidentSeverity = exports.IncidentType = exports.FieldReportType = exports.VerificationStatus = exports.SupportGroupCategory = exports.ScopeType = exports.LEVEL_ROLES = exports.CampaignRole = void 0;
 exports.isIncidentSeverityUrgent = isIncidentSeverityUrgent;
 var CampaignRole;
 (function (CampaignRole) {
     CampaignRole["CANDIDATE"] = "CANDIDATE";
     CampaignRole["CAMPAIGN_DIRECTOR"] = "CAMPAIGN_DIRECTOR";
+    /** @deprecated Use STATE_COLLATION_OFFICER — kept for existing DB rows */
     CampaignRole["STATE_COORDINATOR"] = "STATE_COORDINATOR";
+    /** @deprecated Use LGA_COLLATION_OFFICER — kept for existing DB rows */
     CampaignRole["LGA_COORDINATOR"] = "LGA_COORDINATOR";
+    /** @deprecated Use WARD_RA_OFFICER — kept for existing DB rows */
     CampaignRole["WARD_COORDINATOR"] = "WARD_COORDINATOR";
     CampaignRole["SUPPORT_GROUP_LEADER"] = "SUPPORT_GROUP_LEADER";
     CampaignRole["VOLUNTEER_COORDINATOR"] = "VOLUNTEER_COORDINATOR";
@@ -16,12 +19,21 @@ var CampaignRole;
     CampaignRole["MEDIA_TEAM"] = "MEDIA_TEAM";
     CampaignRole["POLLING_AGENT"] = "POLLING_AGENT";
     CampaignRole["VOLUNTEER"] = "VOLUNTEER";
+    /** @deprecated Use POLLING_AGENT — kept for existing DB rows */
     CampaignRole["POLLING_UNIT_OFFICER"] = "POLLING_UNIT_OFFICER";
     CampaignRole["WARD_RA_OFFICER"] = "WARD_RA_OFFICER";
     CampaignRole["LGA_COLLATION_OFFICER"] = "LGA_COLLATION_OFFICER";
     CampaignRole["STATE_COLLATION_OFFICER"] = "STATE_COLLATION_OFFICER";
     CampaignRole["NATIONAL_COLLATION_OFFICER"] = "NATIONAL_COLLATION_OFFICER";
 })(CampaignRole || (exports.CampaignRole = CampaignRole = {}));
+/** Canonical collation hierarchy — one role per level */
+exports.LEVEL_ROLES = {
+    POLLING_UNIT: CampaignRole.POLLING_AGENT,
+    WARD: CampaignRole.WARD_RA_OFFICER,
+    LGA: CampaignRole.LGA_COLLATION_OFFICER,
+    STATE: CampaignRole.STATE_COLLATION_OFFICER,
+    NATIONAL: CampaignRole.NATIONAL_COLLATION_OFFICER,
+};
 var ScopeType;
 (function (ScopeType) {
     ScopeType["STATE"] = "STATE";
@@ -111,7 +123,6 @@ var SituationStatus;
 exports.MFA_REQUIRED_ROLES = [
     CampaignRole.CANDIDATE,
     CampaignRole.CAMPAIGN_DIRECTOR,
-    CampaignRole.STATE_COORDINATOR,
     CampaignRole.STATE_COLLATION_OFFICER,
     CampaignRole.NATIONAL_COLLATION_OFFICER,
 ];

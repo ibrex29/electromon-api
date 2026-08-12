@@ -19,15 +19,15 @@ const STATE_NAV = [
 ];
 const LGA_NAV = [
     { href: '/dashboard', label: 'Dashboard' },
+    { href: '/dashboard/lga-review', label: 'LGA Review' },
     { href: '/dashboard/my-lga', label: 'Wards' },
     { href: '/dashboard/polling-stations', label: 'Polling Stations' },
-    { href: '/dashboard/results', label: 'Results' },
+    { href: '/dashboard/agents', label: 'Agents' },
 ];
 const WARD_NAV = [
     { href: '/dashboard', label: 'Dashboard' },
+    { href: '/dashboard/ward-review', label: 'Ward Review' },
     { href: '/dashboard/polling-stations', label: 'Polling Stations' },
-    { href: '/dashboard/volunteers', label: 'Volunteers' },
-    { href: '/dashboard/results', label: 'Results' },
 ];
 const PU_NAV = [
     { href: '/dashboard', label: 'Dashboard' },
@@ -44,15 +44,11 @@ function getNavItemsForRole(role) {
         case enums_1.CampaignRole.NATIONAL_COLLATION_OFFICER:
             return NATIONAL_NAV;
         case enums_1.CampaignRole.STATE_COLLATION_OFFICER:
-        case enums_1.CampaignRole.STATE_COORDINATOR:
             return STATE_NAV;
         case enums_1.CampaignRole.LGA_COLLATION_OFFICER:
-        case enums_1.CampaignRole.LGA_COORDINATOR:
             return LGA_NAV;
         case enums_1.CampaignRole.WARD_RA_OFFICER:
-        case enums_1.CampaignRole.WARD_COORDINATOR:
             return WARD_NAV;
-        case enums_1.CampaignRole.POLLING_UNIT_OFFICER:
         case enums_1.CampaignRole.POLLING_AGENT:
             return PU_NAV;
         case enums_1.CampaignRole.CAMPAIGN_DIRECTOR:
@@ -68,9 +64,9 @@ function getDefaultDashboardPath(role) {
         case collation_1.CollationLevel.POLLING_UNIT:
             return '/dashboard/my-unit';
         case collation_1.CollationLevel.WARD:
-            return '/dashboard/polling-stations';
+            return '/dashboard/ward-review';
         case collation_1.CollationLevel.LGA:
-            return '/dashboard/my-lga';
+            return '/dashboard/lga-review';
         case collation_1.CollationLevel.STATE:
         case collation_1.CollationLevel.NATIONAL:
             return '/dashboard/lgas';

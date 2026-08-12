@@ -34,7 +34,7 @@ let UploadsController = class UploadsController {
 exports.UploadsController = UploadsController;
 __decorate([
     (0, common_1.Post)(),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COORDINATOR, shared_1.CampaignRole.LGA_COORDINATOR, shared_1.CampaignRole.WARD_COORDINATOR, shared_1.CampaignRole.POLLING_UNIT_OFFICER, shared_1.CampaignRole.POLLING_AGENT, shared_1.CampaignRole.WARD_RA_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.WARD_RA_OFFICER, shared_1.CampaignRole.POLLING_AGENT),
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', {
         storage: (0, multer_1.memoryStorage)(),
         limits: { fileSize: 5 * 1024 * 1024 },

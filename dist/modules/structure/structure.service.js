@@ -101,10 +101,7 @@ let StructureService = class StructureService {
                     isActive: true,
                     role: {
                         in: [
-                            shared_1.CampaignRole.LGA_COORDINATOR,
-                            shared_1.CampaignRole.WARD_COORDINATOR,
-                            shared_1.CampaignRole.STATE_COORDINATOR,
-                            shared_1.CampaignRole.POLLING_UNIT_OFFICER,
+                            shared_1.CampaignRole.POLLING_AGENT,
                             shared_1.CampaignRole.WARD_RA_OFFICER,
                             shared_1.CampaignRole.LGA_COLLATION_OFFICER,
                             shared_1.CampaignRole.STATE_COLLATION_OFFICER,

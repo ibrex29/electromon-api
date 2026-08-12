@@ -23,9 +23,9 @@ export declare class SituationRoomService {
     } & {
         id: string;
         createdAt: Date;
-        status: import("@electromon/db").$Enums.SituationStatus;
         latitude: number | null;
         longitude: number | null;
+        status: import("@electromon/db").$Enums.SituationStatus;
         notes: string | null;
         isUrgent: boolean;
         reportedById: string;
@@ -56,9 +56,9 @@ export declare class SituationRoomService {
     } & {
         id: string;
         createdAt: Date;
-        status: import("@electromon/db").$Enums.SituationStatus;
         latitude: number | null;
         longitude: number | null;
+        status: import("@electromon/db").$Enums.SituationStatus;
         notes: string | null;
         isUrgent: boolean;
         reportedById: string;
@@ -78,9 +78,9 @@ export declare class SituationRoomService {
     } & {
         id: string;
         createdAt: Date;
-        status: import("@electromon/db").$Enums.SituationStatus;
         latitude: number | null;
         longitude: number | null;
+        status: import("@electromon/db").$Enums.SituationStatus;
         notes: string | null;
         isUrgent: boolean;
         reportedById: string;
@@ -100,9 +100,9 @@ export declare class SituationRoomService {
     } & {
         id: string;
         createdAt: Date;
-        status: import("@electromon/db").$Enums.SituationStatus;
         latitude: number | null;
         longitude: number | null;
+        status: import("@electromon/db").$Enums.SituationStatus;
         notes: string | null;
         isUrgent: boolean;
         reportedById: string;

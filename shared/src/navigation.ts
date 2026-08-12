@@ -24,16 +24,16 @@ const STATE_NAV: DashboardNavItem[] = [
 
 const LGA_NAV: DashboardNavItem[] = [
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/dashboard/lga-review', label: 'LGA Review' },
   { href: '/dashboard/my-lga', label: 'Wards' },
   { href: '/dashboard/polling-stations', label: 'Polling Stations' },
-  { href: '/dashboard/results', label: 'Results' },
+  { href: '/dashboard/agents', label: 'Agents' },
 ];
 
 const WARD_NAV: DashboardNavItem[] = [
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/dashboard/ward-review', label: 'Ward Review' },
   { href: '/dashboard/polling-stations', label: 'Polling Stations' },
-  { href: '/dashboard/volunteers', label: 'Volunteers' },
-  { href: '/dashboard/results', label: 'Results' },
 ];
 
 const PU_NAV: DashboardNavItem[] = [
@@ -53,15 +53,11 @@ export function getNavItemsForRole(role?: string): DashboardNavItem[] {
     case CampaignRole.NATIONAL_COLLATION_OFFICER:
       return NATIONAL_NAV;
     case CampaignRole.STATE_COLLATION_OFFICER:
-    case CampaignRole.STATE_COORDINATOR:
       return STATE_NAV;
     case CampaignRole.LGA_COLLATION_OFFICER:
-    case CampaignRole.LGA_COORDINATOR:
       return LGA_NAV;
     case CampaignRole.WARD_RA_OFFICER:
-    case CampaignRole.WARD_COORDINATOR:
       return WARD_NAV;
-    case CampaignRole.POLLING_UNIT_OFFICER:
     case CampaignRole.POLLING_AGENT:
       return PU_NAV;
     case CampaignRole.CAMPAIGN_DIRECTOR:
@@ -79,9 +75,9 @@ export function getDefaultDashboardPath(role?: string): string {
     case CollationLevel.POLLING_UNIT:
       return '/dashboard/my-unit';
     case CollationLevel.WARD:
-      return '/dashboard/polling-stations';
+      return '/dashboard/ward-review';
     case CollationLevel.LGA:
-      return '/dashboard/my-lga';
+      return '/dashboard/lga-review';
     case CollationLevel.STATE:
     case CollationLevel.NATIONAL:
       return '/dashboard/lgas';

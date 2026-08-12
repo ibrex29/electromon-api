@@ -51,7 +51,7 @@ __decorate([
 ], FieldReportsController.prototype, "list", null);
 __decorate([
     (0, common_1.Post)(),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COORDINATOR, shared_1.CampaignRole.LGA_COORDINATOR, shared_1.CampaignRole.WARD_COORDINATOR, shared_1.CampaignRole.POLLING_UNIT_OFFICER, shared_1.CampaignRole.POLLING_AGENT, shared_1.CampaignRole.VOLUNTEER, shared_1.CampaignRole.VOLUNTEER_COORDINATOR),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.WARD_RA_OFFICER, shared_1.CampaignRole.POLLING_AGENT, shared_1.CampaignRole.VOLUNTEER, shared_1.CampaignRole.VOLUNTEER_COORDINATOR),
     (0, audit_decorators_1.AuditAction)('field_report.create'),
     (0, swagger_1.ApiOperation)({ summary: 'Submit a field report' }),
     (0, swagger_1.ApiCreatedResponse)({ description: 'Field report created' }),
@@ -63,7 +63,7 @@ __decorate([
 ], FieldReportsController.prototype, "create", null);
 __decorate([
     (0, common_1.Patch)(':id/status'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COORDINATOR, shared_1.CampaignRole.LGA_COORDINATOR, shared_1.CampaignRole.WARD_COORDINATOR, shared_1.CampaignRole.WARD_RA_OFFICER),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.WARD_RA_OFFICER),
     (0, audit_decorators_1.AuditAction)('field_report.update_status'),
     (0, swagger_1.ApiOperation)({ summary: 'Escalate, resolve, or comment on a field report' }),
     openapi.ApiResponse({ status: 200, type: Object }),

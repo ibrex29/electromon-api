@@ -14,6 +14,7 @@ export declare enum CollationResultStatus {
 }
 export declare const NATIONAL_SCOPE_ID = "NGA";
 export declare const COLLATION_ROLES: CampaignRole[];
+/** One role per collation level (legacy dual roles map to the same level for old rows) */
 export declare const ROLE_TO_COLLATION_LEVEL: Partial<Record<CampaignRole, CollationLevel>>;
 export declare const LEVEL_TO_SCOPE_TYPE: Record<CollationLevel, ScopeType>;
 export declare const COLLATION_HIERARCHY: CollationLevel[];

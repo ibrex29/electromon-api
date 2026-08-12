@@ -123,9 +123,10 @@ class ListFieldReportsQueryDto {
     pollingUnitId;
     reportedById;
     wardId;
+    lgaId;
     status;
     static _OPENAPI_METADATA_FACTORY() {
-        return { campaignId: { required: true, type: () => String }, type: { required: false, enum: require("../../../../shared/dist/enums").FieldReportType }, incidentType: { required: false, enum: require("../../../../shared/dist/enums").IncidentType }, incidentSeverity: { required: false, enum: require("../../../../shared/dist/enums").IncidentSeverity }, isUrgent: { required: false, type: () => Boolean }, search: { required: false, type: () => String }, pollingUnitId: { required: false, type: () => String }, reportedById: { required: false, type: () => String }, wardId: { required: false, type: () => String }, status: { required: false, enum: require("../../../../shared/dist/enums").FieldReportStatus } };
+        return { campaignId: { required: true, type: () => String }, type: { required: false, enum: require("../../../../shared/dist/enums").FieldReportType }, incidentType: { required: false, enum: require("../../../../shared/dist/enums").IncidentType }, incidentSeverity: { required: false, enum: require("../../../../shared/dist/enums").IncidentSeverity }, isUrgent: { required: false, type: () => Boolean }, search: { required: false, type: () => String }, pollingUnitId: { required: false, type: () => String }, reportedById: { required: false, type: () => String }, wardId: { required: false, type: () => String }, lgaId: { required: false, type: () => String }, status: { required: false, enum: require("../../../../shared/dist/enums").FieldReportStatus } };
     }
 }
 exports.ListFieldReportsQueryDto = ListFieldReportsQueryDto;
@@ -190,6 +191,12 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], ListFieldReportsQueryDto.prototype, "wardId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Filter incidents to a local government area' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ListFieldReportsQueryDto.prototype, "lgaId", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({ enum: shared_1.FieldReportStatus }),
     (0, class_validator_1.IsOptional)(),
