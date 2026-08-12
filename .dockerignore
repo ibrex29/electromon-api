@@ -5,22 +5,29 @@
 .github
 .gitignore
 .dockerignore
+.cursor
+.vscode
+.idea
 
 # env & secrets
 .env
 .env.*
-**/.env
+!**/*.env.example
 **/*.pem
+**/*.key
 infra/observability/prometheus/metrics_token
 infra/backups
 
 # dependencies & build (reinstalled inside image)
 node_modules
 **/node_modules
+.pnpm-store
 dist
 **/dist
 coverage
+.nyc_output
 .turbo
+.cache
 *.tsbuildinfo
 .eslintcache
 
@@ -28,11 +35,11 @@ coverage
 docs
 *.md
 !README.md
-.idea
-.vscode
 .DS_Store
 uploads
 **/*.log
+tmp
+temp
 
 # tests not needed in runtime image
 test
