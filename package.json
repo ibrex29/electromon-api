@@ -25,6 +25,7 @@
     "db:migrate": "pnpm --dir db migrate",
     "db:migrate:deploy": "pnpm --dir db migrate:deploy",
     "db:seed": "pnpm --dir db seed",
+    "db:seed:production:apc": "pnpm --dir db seed:production:apc",
     "db:studio": "pnpm --dir db studio",
     "shared:build": "pnpm --dir shared build",
     "postinstall": "pnpm --dir db install && pnpm --dir shared install"

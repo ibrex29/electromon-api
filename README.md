@@ -128,9 +128,12 @@ Template: [infra/env/local.env.example](./infra/env/local.env.example)
 make db-studio           # Prisma Studio UI
 pnpm db:migrate          # create migration (dev)
 pnpm db:migrate:deploy   # apply migrations
-pnpm db:seed             # Jigawa INEC data + demo users
+pnpm db:seed             # Dev/demo: Jigawa INEC + fake results + demo users
+pnpm db:seed:production:apc  # Production APC: geography + campaign + director only
 pnpm db:generate         # regenerate Prisma client
 ```
+
+Production APC seed requires `SEED_ADMIN_PASSWORD` (min 12 chars). See `infra/env/production.env.example`.
 
 After schema changes:
 

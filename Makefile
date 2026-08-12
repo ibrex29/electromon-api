@@ -2,7 +2,7 @@
         infra-up infra-down infra-logs infra-ps infra-full infra-full-down \
         infra-obs-up infra-obs-down infra-staging-up infra-staging-down \
         infra-prod-up infra-prod-down infra-prod-external-up \
-        infra-migrate infra-reset db-generate db-migrate db-migrate-deploy db-seed db-studio db-reset
+        infra-migrate infra-reset db-generate db-migrate db-migrate-deploy db-seed db-seed-production-apc db-studio db-reset
 
 PNPM := COREPACK_ENABLE_STRICT=0 pnpm
 DOCKER := docker compose
@@ -23,6 +23,8 @@ help:
 	@echo "  make infra-up       Start Postgres, Redis, RabbitMQ, MinIO"
 	@echo "  make infra-full     Run API + deps fully in Docker"
 	@echo "  make db-studio      Prisma Studio"
+	@echo "  make db-seed        Dev/demo seed"
+	@echo "  make db-seed-production-apc  Production APC bootstrap"
 
 install:
 	$(PNPM) install
@@ -111,6 +113,11 @@ db-migrate-deploy:
 
 db-seed:
 	$(PNPM) db:seed
+
+# Production APC bootstrap (geography + campaign + director). Requires SEED_ADMIN_PASSWORD.
+# Does not invent collation results, incidents, or demo agents.
+db-seed-production-apc:
+	$(PNPM) db:seed:production:apc
 
 db-studio:
 	$(PNPM) db:studio
