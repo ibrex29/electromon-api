@@ -25,6 +25,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Prisma 7 requires DATABASE_URL while generating the client (build does not connect).
+ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public"
 RUN pnpm shared:build && pnpm db:build && pnpm build
 
 FROM node:20-alpine AS runner

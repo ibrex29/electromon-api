@@ -26,9 +26,10 @@ Use the single-file stack instead:
 
 1. Compose service → Compose file: **`infra/compose/dokploy.yml`**
 2. Isolated Deployments: **On**
-3. Do **not** override the compose command (no `--profile apps` needed)
-4. Domains → Add Domain → service **`api`**, container port **`3001`**, HTTPS on
-5. Do not deploy `edge.yml` / Caddy on the same host (Traefik already binds 80/443)
+3. **Advanced → Command: delete any custom command** (do not use `base.yml` + `production.yml` + `--profile apps`). That command interpolates `${JWT_ACCESS_SECRET:?}` before Dokploy’s `.env` is loaded and the deploy fails.
+4. Environment: paste `infra/env/dokploy.env.example` with real secrets. You **must** set `DATABASE_URL`, `RABBITMQ_DEFAULT_PASS` (same as `RABBITMQ_PASSWORD`), and `MINIO_ROOT_PASSWORD` (same as `S3_SECRET_KEY`).
+5. Domains → Add Domain → service **`api`**, container port **`3001`**, HTTPS on
+6. Do not deploy `edge.yml` / Caddy on the same host (Traefik already binds 80/443)
 
 Services in that file: `postgres`, `redis`, `rabbitmq`, `minio`, `minio-init`, `migrate`, **`api`**.
 
