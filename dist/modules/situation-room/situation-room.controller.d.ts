@@ -33,9 +33,9 @@ export declare class SituationRoomController {
         longitude: number | null;
         status: import("db/dist").$Enums.SituationStatus;
         notes: string | null;
-        isUrgent: boolean;
         reportedById: string;
         pollingUnitId: string;
+        isUrgent: boolean;
     })[]>;
     findOne(user: JwtPayload, id: string, campaignId: string): Promise<{
         pollingUnit: {
@@ -55,9 +55,9 @@ export declare class SituationRoomController {
         longitude: number | null;
         status: import("db/dist").$Enums.SituationStatus;
         notes: string | null;
-        isUrgent: boolean;
         reportedById: string;
         pollingUnitId: string;
+        isUrgent: boolean;
     }>;
     create(user: JwtPayload, dto: CreateSituationUpdateDto): Promise<{
         pollingUnit: {
@@ -77,9 +77,9 @@ export declare class SituationRoomController {
         longitude: number | null;
         status: import("db/dist").$Enums.SituationStatus;
         notes: string | null;
-        isUrgent: boolean;
         reportedById: string;
         pollingUnitId: string;
+        isUrgent: boolean;
     }>;
     update(user: JwtPayload, id: string, dto: UpdateSituationUpdateDto): Promise<{
         pollingUnit: {
@@ -99,9 +99,9 @@ export declare class SituationRoomController {
         longitude: number | null;
         status: import("db/dist").$Enums.SituationStatus;
         notes: string | null;
-        isUrgent: boolean;
         reportedById: string;
         pollingUnitId: string;
+        isUrgent: boolean;
     }>;
     remove(user: JwtPayload, id: string, campaignId: string): Promise<{
         success: boolean;

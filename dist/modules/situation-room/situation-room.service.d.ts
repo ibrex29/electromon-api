@@ -27,9 +27,9 @@ export declare class SituationRoomService {
         longitude: number | null;
         status: import("@electromon/db").$Enums.SituationStatus;
         notes: string | null;
-        isUrgent: boolean;
         reportedById: string;
         pollingUnitId: string;
+        isUrgent: boolean;
     })[]>;
     getSummary(user: JwtPayload, campaignId: string): Promise<{
         campaignId: string;
@@ -60,9 +60,9 @@ export declare class SituationRoomService {
         longitude: number | null;
         status: import("@electromon/db").$Enums.SituationStatus;
         notes: string | null;
-        isUrgent: boolean;
         reportedById: string;
         pollingUnitId: string;
+        isUrgent: boolean;
     }>;
     create(user: JwtPayload, dto: CreateSituationUpdateDto): Promise<{
         pollingUnit: {
@@ -82,9 +82,9 @@ export declare class SituationRoomService {
         longitude: number | null;
         status: import("@electromon/db").$Enums.SituationStatus;
         notes: string | null;
-        isUrgent: boolean;
         reportedById: string;
         pollingUnitId: string;
+        isUrgent: boolean;
     }>;
     update(user: JwtPayload, id: string, dto: UpdateSituationUpdateDto): Promise<{
         pollingUnit: {
@@ -104,9 +104,9 @@ export declare class SituationRoomService {
         longitude: number | null;
         status: import("@electromon/db").$Enums.SituationStatus;
         notes: string | null;
-        isUrgent: boolean;
         reportedById: string;
         pollingUnitId: string;
+        isUrgent: boolean;
     }>;
     remove(user: JwtPayload, id: string, campaignId: string): Promise<{
         success: boolean;

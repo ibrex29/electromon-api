@@ -9,9 +9,9 @@ export declare class StructureController {
         };
     } & {
         id: string;
+        createdAt: Date;
         name: string;
         code: string;
-        createdAt: Date;
         updatedAt: Date;
     })[]>;
     getLgas(stateId: string): import("db/dist").Prisma.PrismaPromise<({
@@ -20,15 +20,15 @@ export declare class StructureController {
         };
         senatorialDistrict: {
             id: string;
-            name: string;
             createdAt: Date;
+            name: string;
             updatedAt: Date;
             stateId: string;
         } | null;
     } & {
         id: string;
-        name: string;
         createdAt: Date;
+        name: string;
         updatedAt: Date;
         stateId: string;
         senatorialDistrictId: string | null;
@@ -40,28 +40,28 @@ export declare class StructureController {
         };
     } & {
         id: string;
-        name: string;
         createdAt: Date;
-        updatedAt: Date;
-        registrationAreaCode: string | null;
+        name: string;
         lgaId: string;
         latitude: number | null;
         longitude: number | null;
+        updatedAt: Date;
+        registrationAreaCode: string | null;
     })[]>;
     getPollingUnits(wardId: string): import("db/dist").Prisma.PrismaPromise<{
         id: string;
-        name: string;
-        code: string;
         createdAt: Date;
-        updatedAt: Date;
+        name: string;
+        wardId: string;
+        code: string;
         latitude: number | null;
         longitude: number | null;
-        wardId: string;
         strengthAssessment: import("db/dist").$Enums.PollingUnitStrength | null;
         status: import("db/dist").$Enums.PollingUnitStatus;
         assignedAgentId: string | null;
         historicalResults: import("db/dist/generated/runtime/client").JsonValue | null;
         notes: string | null;
+        updatedAt: Date;
     }[]>;
     getCollationHierarchy(): {
         level: import("shared/dist").CollationLevel;

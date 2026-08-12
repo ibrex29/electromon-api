@@ -12,6 +12,7 @@ import {
   ScopeType,
   getParentLevel,
   getCollationLevelForRole,
+  isCampaignAdminRole,
 } from '@electromon/shared';
 import { Prisma } from '@electromon/db';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -33,6 +34,41 @@ export class CollationService {
   async getDashboard(user: JwtPayload) {
     if (!user.role || !user.campaignId) {
       throw new ForbiddenException('No active campaign membership');
+    }
+
+    if (isCampaignAdminRole(user.role)) {
+      const campaign = await this.prisma.campaign.findUnique({
+        where: { id: user.campaignId },
+        include: { state: { select: { id: true, name: true } } },
+      });
+      if (!campaign) throw new ForbiddenException('Campaign not found');
+
+      const submittedCount = await this.prisma.collationResult.count({
+        where: {
+          campaignId: user.campaignId,
+          level: CollationLevel.LGA,
+          status: CollationResultStatus.SUBMITTED,
+        },
+      });
+
+      return {
+        dashboard: {
+          level: CollationLevel.STATE,
+          levelLabel: 'Campaign Command (Admin)',
+          levelOrder: 4,
+          scopeType: ScopeType.STATE,
+          scopeId: campaign.stateId,
+          scopeName: campaign.state.name,
+          canSubmit: false,
+          canApprove: false,
+          route: '/dashboard/lgas',
+        },
+        scopeChain: {
+          state: { id: campaign.state.id, name: campaign.state.name },
+        },
+        pendingApprovals: submittedCount,
+        myResult: null,
+      };
     }
 
     const dashboard = await this.scopeResolver.buildDashboard(
@@ -68,6 +104,41 @@ export class CollationService {
   }
 
   async listResults(user: JwtPayload, status?: CollationResultStatus) {
+    if (isCampaignAdminRole(user.role)) {
+      if (!user.campaignId) {
+        throw new ForbiddenException('No active campaign membership');
+      }
+      const where: Record<string, unknown> = {
+        campaignId: user.campaignId,
+        level: CollationLevel.LGA,
+      };
+      if (status) where.status = status;
+
+      const rows = await this.prisma.collationResult.findMany({
+        where,
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          submittedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+          approvedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+        },
+        take: 200,
+      });
+
+      const lgaIds = [...new Set(rows.map((r) => r.scopeId).filter(Boolean))];
+      const lgas = lgaIds.length
+        ? await this.prisma.lGA.findMany({
+            where: { id: { in: lgaIds } },
+            select: { id: true, name: true },
+          })
+        : [];
+      const lgaName = new Map(lgas.map((l) => [l.id, l.name]));
+
+      return rows.map((r) => ({
+        ...r,
+        scopeName: lgaName.get(r.scopeId) ?? r.scopeId,
+      }));
+    }
+
     this.assertCollationUser(user);
 
     const level = getCollationLevelForRole(user.role as CampaignRole)!;
@@ -87,6 +158,91 @@ export class CollationService {
         approvedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
       },
     });
+  }
+
+  async getPollingUnitResultForViewer(user: JwtPayload, pollingUnitId: string) {
+    if (!user.campaignId || !user.role) {
+      throw new ForbiddenException('No active campaign membership');
+    }
+
+    const pu = await this.prisma.pollingUnit.findUnique({
+      where: { id: pollingUnitId },
+      include: { ward: { include: { lga: { select: { id: true, stateId: true, name: true } } } } },
+    });
+    if (!pu) throw new NotFoundException('Polling unit not found');
+
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: user.campaignId },
+      select: { stateId: true },
+    });
+    if (!campaign || pu.ward.lga.stateId !== campaign.stateId) {
+      throw new ForbiddenException('Polling unit is outside your campaign state');
+    }
+
+    if (isCampaignAdminRole(user.role)) {
+      // full state access
+    } else if (
+      user.role === CampaignRole.LGA_COLLATION_OFFICER ||
+      user.scopeType === ScopeType.LGA
+    ) {
+      if (user.scopeId !== pu.ward.lgaId) {
+        throw new ForbiddenException('Polling unit is outside your assigned LGA');
+      }
+    } else if (
+      user.role === CampaignRole.WARD_RA_OFFICER ||
+      user.scopeType === ScopeType.WARD
+    ) {
+      if (user.scopeId !== pu.wardId) {
+        throw new ForbiddenException('Polling unit is outside your assigned ward');
+      }
+    } else if (
+      user.role === CampaignRole.POLLING_AGENT ||
+      user.scopeType === ScopeType.POLLING_UNIT
+    ) {
+      if (user.scopeId !== pollingUnitId) {
+        throw new ForbiddenException('You can only view your assigned polling unit');
+      }
+    } else {
+      throw new ForbiddenException('Insufficient permissions');
+    }
+
+    const result = await this.prisma.collationResult.findFirst({
+      where: {
+        campaignId: user.campaignId,
+        level: CollationLevel.POLLING_UNIT,
+        scopeId: pollingUnitId,
+      },
+      include: {
+        submittedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+        approvedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
+    });
+
+    return {
+      ...(result ?? {}),
+      id: result?.id,
+      status: result?.status ?? null,
+      registeredVoters: result?.registeredVoters ?? null,
+      accreditedVoters: result?.accreditedVoters ?? null,
+      votesCast: result?.votesCast ?? null,
+      partyResults: result?.partyResults ?? null,
+      rejectionReason: result?.rejectionReason ?? null,
+      submittedAt: result?.submittedAt ?? null,
+      ec8aPhotoUrls: result?.ec8aPhotoUrls ?? [],
+      submittedBy: result?.submittedBy ?? null,
+      approvedBy: result?.approvedBy ?? null,
+      approvedAt: result?.approvedAt ?? null,
+      level: result?.level ?? CollationLevel.POLLING_UNIT,
+      scopeId: pollingUnitId,
+      pollingUnit: {
+        id: pu.id,
+        name: pu.name,
+        code: pu.code,
+        wardId: pu.wardId,
+        wardName: pu.ward.name,
+        lgaName: pu.ward.lga.name,
+      },
+    };
   }
 
   async listPendingApprovals(user: JwtPayload) {
@@ -1154,7 +1310,9 @@ export class CollationService {
   }
 
   async listActionLogs(user: JwtPayload, resultId: string) {
-    this.assertCollationUser(user);
+    if (!user.campaignId || !user.role) {
+      throw new ForbiddenException('No active campaign membership');
+    }
 
     const result = await this.prisma.collationResult.findUnique({ where: { id: resultId } });
     if (!result) throw new NotFoundException('Collation result not found');
@@ -1162,16 +1320,20 @@ export class CollationService {
       throw new ForbiddenException('Result is outside your campaign');
     }
 
-    // Approvers may view logs for results they can act on (or already acted on).
-    // Submitters may view logs for their own scope results.
-    const ownLevel = getCollationLevelForRole(user.role as CampaignRole)!;
-    const canViewOwn =
-      result.level === ownLevel &&
-      result.scopeType === user.scopeType &&
-      result.scopeId === user.scopeId;
+    if (!isCampaignAdminRole(user.role)) {
+      this.assertCollationUser(user);
 
-    if (!canViewOwn) {
-      await this.verifyApproverScope(user, result);
+      // Approvers may view logs for results they can act on (or already acted on).
+      // Submitters may view logs for their own scope results.
+      const ownLevel = getCollationLevelForRole(user.role as CampaignRole)!;
+      const canViewOwn =
+        result.level === ownLevel &&
+        result.scopeType === user.scopeType &&
+        result.scopeId === user.scopeId;
+
+      if (!canViewOwn) {
+        await this.verifyApproverScope(user, result);
+      }
     }
 
     return this.prisma.collationActionLog.findMany({

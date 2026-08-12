@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.COLLATION_HIERARCHY = exports.LEVEL_TO_SCOPE_TYPE = exports.ROLE_TO_COLLATION_LEVEL = exports.COLLATION_ROLES = exports.NATIONAL_SCOPE_ID = exports.CollationResultStatus = exports.CollationLevel = void 0;
+exports.COLLATION_HIERARCHY = exports.LEVEL_TO_SCOPE_TYPE = exports.ROLE_TO_COLLATION_LEVEL = exports.COLLATION_READ_ROLES = exports.CAMPAIGN_ADMIN_ROLES = exports.COLLATION_ROLES = exports.NATIONAL_SCOPE_ID = exports.CollationResultStatus = exports.CollationLevel = void 0;
+exports.isCampaignAdminRole = isCampaignAdminRole;
 exports.getCollationLevelForRole = getCollationLevelForRole;
 exports.buildDashboardMeta = buildDashboardMeta;
 exports.getParentLevel = getParentLevel;
@@ -28,6 +29,19 @@ exports.COLLATION_ROLES = [
     enums_1.CampaignRole.LGA_COLLATION_OFFICER,
     enums_1.CampaignRole.STATE_COLLATION_OFFICER,
     enums_1.CampaignRole.NATIONAL_COLLATION_OFFICER,
+];
+/** System controllers — full read access across the campaign */
+exports.CAMPAIGN_ADMIN_ROLES = [
+    enums_1.CampaignRole.CAMPAIGN_DIRECTOR,
+    enums_1.CampaignRole.CANDIDATE,
+];
+function isCampaignAdminRole(role) {
+    return (role === enums_1.CampaignRole.CAMPAIGN_DIRECTOR || role === enums_1.CampaignRole.CANDIDATE);
+}
+/** Collation officers + campaign admins (read endpoints) */
+exports.COLLATION_READ_ROLES = [
+    ...exports.COLLATION_ROLES,
+    ...exports.CAMPAIGN_ADMIN_ROLES,
 ];
 /** One role per collation level (legacy dual roles map to the same level for old rows) */
 exports.ROLE_TO_COLLATION_LEVEL = {

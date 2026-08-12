@@ -18,8 +18,8 @@ export declare class CommitmentsService {
         campaignId: string;
         description: string | null;
         title: string;
-        updatedAt: Date;
         status: import("@electromon/db").$Enums.CommitmentStatus;
+        updatedAt: Date;
         supportGroupId: string;
         targetValue: number;
         currentValue: number;
@@ -36,8 +36,8 @@ export declare class CommitmentsService {
         campaignId: string;
         description: string | null;
         title: string;
-        updatedAt: Date;
         status: import("@electromon/db").$Enums.CommitmentStatus;
+        updatedAt: Date;
         supportGroupId: string;
         targetValue: number;
         currentValue: number;
@@ -54,8 +54,8 @@ export declare class CommitmentsService {
         campaignId: string;
         description: string | null;
         title: string;
-        updatedAt: Date;
         status: import("@electromon/db").$Enums.CommitmentStatus;
+        updatedAt: Date;
         supportGroupId: string;
         targetValue: number;
         currentValue: number;
@@ -72,8 +72,8 @@ export declare class CommitmentsService {
         campaignId: string;
         description: string | null;
         title: string;
-        updatedAt: Date;
         status: import("@electromon/db").$Enums.CommitmentStatus;
+        updatedAt: Date;
         supportGroupId: string;
         targetValue: number;
         currentValue: number;

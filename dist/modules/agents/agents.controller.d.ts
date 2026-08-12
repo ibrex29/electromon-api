@@ -1,6 +1,6 @@
 import { CampaignRole, type JwtPayload } from '@electromon/shared';
 import { AgentsService } from './agents.service';
-import { ListAgentsQueryDto } from './dto/agents.dto';
+import { CreateAgentDto, ListAgentsQueryDto, UpdateAgentDto } from './dto/agents.dto';
 export declare class AgentsController {
     private agentsService;
     constructor(agentsService: AgentsService);
@@ -83,5 +83,39 @@ export declare class AgentsController {
             detail: string | null;
             status: string | null;
         }[];
+    }>;
+    create(user: JwtPayload, dto: CreateAgentDto): Promise<{
+        membershipId: string;
+        userId: string;
+        firstName: string;
+        lastName: string;
+        phoneNumber: string | null;
+        email: string;
+        role: CampaignRole;
+        scopeType: import("@electromon/shared").ScopeType;
+        scopeId: string;
+        scopeName: string;
+        wardName: string | null;
+        lgaName: string | null;
+        isActive: boolean;
+        userActive: boolean;
+        createdAt: Date;
+    }>;
+    update(user: JwtPayload, membershipId: string, dto: UpdateAgentDto): Promise<{
+        membershipId: string;
+        userId: string;
+        firstName: string;
+        lastName: string;
+        phoneNumber: string | null;
+        email: string;
+        role: CampaignRole;
+        scopeType: import("@electromon/shared").ScopeType;
+        scopeId: string;
+        scopeName: string;
+        wardName: string | null;
+        lgaName: string | null;
+        isActive: boolean;
+        userActive: boolean;
+        createdAt: Date;
     }>;
 }

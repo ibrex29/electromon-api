@@ -33,6 +33,7 @@ export class AgentsService {
   private assertViewer(user: JwtPayload) {
     const allowed = new Set([
       CampaignRole.CAMPAIGN_DIRECTOR,
+      CampaignRole.CANDIDATE,
       CampaignRole.STATE_COLLATION_OFFICER,
       CampaignRole.LGA_COLLATION_OFFICER,
       CampaignRole.WARD_RA_OFFICER,
@@ -42,11 +43,11 @@ export class AgentsService {
     }
   }
 
-  /** @deprecated use assertViewer — create/update removed from API */
+  /** Full create/update — system admin (campaign director / candidate) only */
   private assertManager(user: JwtPayload) {
-    this.assertViewer(user);
-    if (user.role === CampaignRole.WARD_RA_OFFICER) {
-      throw new ForbiddenException('Ward officers can only view PU agents');
+    const allowed = new Set([CampaignRole.CAMPAIGN_DIRECTOR, CampaignRole.CANDIDATE]);
+    if (!user.role || !allowed.has(user.role as CampaignRole)) {
+      throw new ForbiddenException('Only system admin can manage agents');
     }
   }
 

@@ -25,6 +25,24 @@ export const COLLATION_ROLES: CampaignRole[] = [
   CampaignRole.NATIONAL_COLLATION_OFFICER,
 ];
 
+/** System controllers — full read access across the campaign */
+export const CAMPAIGN_ADMIN_ROLES: CampaignRole[] = [
+  CampaignRole.CAMPAIGN_DIRECTOR,
+  CampaignRole.CANDIDATE,
+];
+
+export function isCampaignAdminRole(role?: CampaignRole | string | null): boolean {
+  return (
+    role === CampaignRole.CAMPAIGN_DIRECTOR || role === CampaignRole.CANDIDATE
+  );
+}
+
+/** Collation officers + campaign admins (read endpoints) */
+export const COLLATION_READ_ROLES: CampaignRole[] = [
+  ...COLLATION_ROLES,
+  ...CAMPAIGN_ADMIN_ROLES,
+];
+
 /** One role per collation level (legacy dual roles map to the same level for old rows) */
 export const ROLE_TO_COLLATION_LEVEL: Partial<Record<CampaignRole, CollationLevel>> = {
   [CampaignRole.POLLING_AGENT]: CollationLevel.POLLING_UNIT,

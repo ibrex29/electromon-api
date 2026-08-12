@@ -10,6 +10,7 @@ import {
 import {
   CampaignRole,
   CollationResultStatus,
+  COLLATION_READ_ROLES,
   COLLATION_ROLES,
   JwtPayload,
 } from '@electromon/shared';
@@ -107,28 +108,68 @@ export class CollationController {
     );
   }
 
+  @Get('browse/race-analytics')
+  @ApiOperation({ summary: 'Situation Room race board analytics (party standings, LGA outcomes)' })
+  raceAnalytics(@CurrentUser() user: JwtPayload) {
+    return this.browseService.getRaceAnalytics(user);
+  }
+
+  @Get('browse/situation-map')
+  @ApiOperation({
+    summary:
+      'Situation Room map: omit filters for LGA overview (win/loss + incidents); pass lgaId/wardId for detail points',
+  })
+  @ApiQuery({ name: 'lgaId', required: false })
+  @ApiQuery({ name: 'wardId', required: false })
+  situationMap(
+    @CurrentUser() user: JwtPayload,
+    @Query('lgaId') lgaId?: string,
+    @Query('wardId') wardId?: string,
+  ) {
+    return this.browseService.situationMapPoints(user, { lgaId, wardId });
+  }
+
   @Get('browse/my-polling-units')
-  @ApiOperation({ summary: 'Paginated polling units for ward/LGA-scoped user' })
+  @ApiOperation({
+    summary: 'Paginated polling units for ward/LGA/admin users',
+    description: 'Supports search, and for state/admin users optional lgaId and wardId filters.',
+  })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'lgaId', required: false })
+  @ApiQuery({ name: 'wardId', required: false })
+  @ApiQuery({
+    name: 'hasResults',
+    required: false,
+    description: 'true = only PUs with a collation result; false = only not started',
+  })
   browseMyPollingUnits(
     @CurrentUser() user: JwtPayload,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
+    @Query('lgaId') lgaId?: string,
+    @Query('wardId') wardId?: string,
+    @Query('hasResults') hasResults?: string,
   ) {
+    const hasResultsFilter =
+      hasResults === 'true' ? true : hasResults === 'false' ? false : undefined;
     return this.browseService.browsePollingUnitsForUser(
       user,
       Number(page) || 1,
       Number(limit) || 20,
       search,
+      { lgaId, wardId, hasResults: hasResultsFilter },
     );
   }
 
   @Get('dashboard')
-  @Roles(...COLLATION_ROLES)
+  @Roles(...COLLATION_READ_ROLES)
   @ApiOperation({
     summary: 'Collation dashboard for current user',
     description:
-      'Returns dashboard metadata, geographic scope chain, pending approvals, and current result for the logged-in collation officer.',
+      'Returns dashboard metadata, geographic scope chain, pending approvals, and current result for the logged-in collation officer or campaign admin.',
   })
   @ApiOkResponse({ description: 'Dashboard payload' })
   @ApiUnauthorizedResponse({ type: ApiErrorResponseDto })
@@ -137,8 +178,8 @@ export class CollationController {
   }
 
   @Get('results')
-  @Roles(...COLLATION_ROLES)
-  @ApiOperation({ summary: 'List collation results for current scope' })
+  @Roles(...COLLATION_READ_ROLES)
+  @ApiOperation({ summary: 'List collation results for current scope (admins: LGA rollups statewide)' })
   @ApiQuery({ name: 'status', enum: CollationResultStatus, required: false })
   @ApiOkResponse({ description: 'Collation results' })
   listResults(
@@ -146,6 +187,13 @@ export class CollationController {
     @Query('status') status?: CollationResultStatus,
   ) {
     return this.collationService.listResults(user, status);
+  }
+
+  @Get('browse/polling-units/:puId/result')
+  @Roles(...COLLATION_READ_ROLES)
+  @ApiOperation({ summary: 'Read PU collation result (ward/LGA/admin browse)' })
+  getPollingUnitResult(@CurrentUser() user: JwtPayload, @Param('puId') puId: string) {
+    return this.collationService.getPollingUnitResultForViewer(user, puId);
   }
 
   @Get('pending-approvals')
@@ -305,7 +353,7 @@ export class CollationController {
   }
 
   @Get('results/:id/action-logs')
-  @Roles(...COLLATION_ROLES)
+  @Roles(...COLLATION_READ_ROLES)
   @ApiOperation({ summary: 'Action log for submit / approve / reject on a collation result' })
   listActionLogs(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     return this.collationService.listActionLogs(user, id);

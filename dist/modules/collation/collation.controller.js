@@ -46,14 +46,24 @@ let CollationController = class CollationController {
     browsePollingUnits(user, wardId, page, limit, search) {
         return this.browseService.browsePollingUnits(user, wardId, Number(page) || 1, Number(limit) || 20, search);
     }
-    browseMyPollingUnits(user, page, limit, search) {
-        return this.browseService.browsePollingUnitsForUser(user, Number(page) || 1, Number(limit) || 20, search);
+    raceAnalytics(user) {
+        return this.browseService.getRaceAnalytics(user);
+    }
+    situationMap(user, lgaId, wardId) {
+        return this.browseService.situationMapPoints(user, { lgaId, wardId });
+    }
+    browseMyPollingUnits(user, page, limit, search, lgaId, wardId, hasResults) {
+        const hasResultsFilter = hasResults === 'true' ? true : hasResults === 'false' ? false : undefined;
+        return this.browseService.browsePollingUnitsForUser(user, Number(page) || 1, Number(limit) || 20, search, { lgaId, wardId, hasResults: hasResultsFilter });
     }
     getDashboard(user) {
         return this.collationService.getDashboard(user);
     }
     listResults(user, status) {
         return this.collationService.listResults(user, status);
+    }
+    getPollingUnitResult(user, puId) {
+        return this.collationService.getPollingUnitResultForViewer(user, puId);
     }
     listPending(user) {
         return this.collationService.listPendingApprovals(user);
@@ -176,26 +186,63 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], CollationController.prototype, "browsePollingUnits", null);
 __decorate([
-    openapi.ApiQuery({ name: "page", required: false }),
-    openapi.ApiQuery({ name: "limit", required: false }),
-    openapi.ApiQuery({ name: "search", required: false }),
+    (0, common_1.Get)('browse/race-analytics'),
+    (0, swagger_1.ApiOperation)({ summary: 'Situation Room race board analytics (party standings, LGA outcomes)' }),
+    openapi.ApiResponse({ status: 200, type: Object }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], CollationController.prototype, "raceAnalytics", null);
+__decorate([
+    (0, common_1.Get)('browse/situation-map'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Situation Room map: omit filters for LGA overview (win/loss + incidents); pass lgaId/wardId for detail points',
+    }),
+    (0, swagger_1.ApiQuery)({ name: 'lgaId', required: false }),
+    (0, swagger_1.ApiQuery)({ name: 'wardId', required: false }),
+    openapi.ApiResponse({ status: 200, type: Object }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)('lgaId')),
+    __param(2, (0, common_1.Query)('wardId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", void 0)
+], CollationController.prototype, "situationMap", null);
+__decorate([
     (0, common_1.Get)('browse/my-polling-units'),
-    (0, swagger_1.ApiOperation)({ summary: 'Paginated polling units for ward/LGA-scoped user' }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Paginated polling units for ward/LGA/admin users',
+        description: 'Supports search, and for state/admin users optional lgaId and wardId filters.',
+    }),
+    (0, swagger_1.ApiQuery)({ name: 'page', required: false }),
+    (0, swagger_1.ApiQuery)({ name: 'limit', required: false }),
+    (0, swagger_1.ApiQuery)({ name: 'search', required: false }),
+    (0, swagger_1.ApiQuery)({ name: 'lgaId', required: false }),
+    (0, swagger_1.ApiQuery)({ name: 'wardId', required: false }),
+    (0, swagger_1.ApiQuery)({
+        name: 'hasResults',
+        required: false,
+        description: 'true = only PUs with a collation result; false = only not started',
+    }),
     openapi.ApiResponse({ status: 200, type: Object }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Query)('page')),
     __param(2, (0, common_1.Query)('limit')),
     __param(3, (0, common_1.Query)('search')),
+    __param(4, (0, common_1.Query)('lgaId')),
+    __param(5, (0, common_1.Query)('wardId')),
+    __param(6, (0, common_1.Query)('hasResults')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, String, String]),
+    __metadata("design:paramtypes", [Object, String, String, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], CollationController.prototype, "browseMyPollingUnits", null);
 __decorate([
     (0, common_1.Get)('dashboard'),
-    (0, auth_decorators_1.Roles)(...shared_1.COLLATION_ROLES),
+    (0, auth_decorators_1.Roles)(...shared_1.COLLATION_READ_ROLES),
     (0, swagger_1.ApiOperation)({
         summary: 'Collation dashboard for current user',
-        description: 'Returns dashboard metadata, geographic scope chain, pending approvals, and current result for the logged-in collation officer.',
+        description: 'Returns dashboard metadata, geographic scope chain, pending approvals, and current result for the logged-in collation officer or campaign admin.',
     }),
     (0, swagger_1.ApiOkResponse)({ description: 'Dashboard payload' }),
     (0, swagger_1.ApiUnauthorizedResponse)({ type: api_response_dto_1.ApiErrorResponseDto }),
@@ -206,8 +253,8 @@ __decorate([
 ], CollationController.prototype, "getDashboard", null);
 __decorate([
     (0, common_1.Get)('results'),
-    (0, auth_decorators_1.Roles)(...shared_1.COLLATION_ROLES),
-    (0, swagger_1.ApiOperation)({ summary: 'List collation results for current scope' }),
+    (0, auth_decorators_1.Roles)(...shared_1.COLLATION_READ_ROLES),
+    (0, swagger_1.ApiOperation)({ summary: 'List collation results for current scope (admins: LGA rollups statewide)' }),
     (0, swagger_1.ApiQuery)({ name: 'status', enum: shared_1.CollationResultStatus, required: false }),
     (0, swagger_1.ApiOkResponse)({ description: 'Collation results' }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
@@ -216,6 +263,17 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], CollationController.prototype, "listResults", null);
+__decorate([
+    (0, common_1.Get)('browse/polling-units/:puId/result'),
+    (0, auth_decorators_1.Roles)(...shared_1.COLLATION_READ_ROLES),
+    (0, swagger_1.ApiOperation)({ summary: 'Read PU collation result (ward/LGA/admin browse)' }),
+    openapi.ApiResponse({ status: 200 }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('puId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], CollationController.prototype, "getPollingUnitResult", null);
 __decorate([
     (0, common_1.Get)('pending-approvals'),
     (0, auth_decorators_1.Roles)(shared_1.CampaignRole.WARD_RA_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.NATIONAL_COLLATION_OFFICER),
@@ -381,7 +439,7 @@ __decorate([
 ], CollationController.prototype, "rejectResult", null);
 __decorate([
     (0, common_1.Get)('results/:id/action-logs'),
-    (0, auth_decorators_1.Roles)(...shared_1.COLLATION_ROLES),
+    (0, auth_decorators_1.Roles)(...shared_1.COLLATION_READ_ROLES),
     (0, swagger_1.ApiOperation)({ summary: 'Action log for submit / approve / reject on a collation result' }),
     openapi.ApiResponse({ status: 200, type: [Object] }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),

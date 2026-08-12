@@ -10,8 +10,9 @@ export interface DashboardNavItem {
 const ADMIN_NAV: DashboardNavItem[] = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/dashboard/lgas', label: 'Local Governments' },
+  { href: '/dashboard/polling-stations', label: 'Polling Stations' },
   { href: '/dashboard/results', label: 'Results' },
-  { href: '/dashboard/volunteers', label: 'Volunteers' },
+  { href: '/dashboard/agents', label: 'Agents' },
   { href: '/dashboard/situation-room', label: 'Situation Room' },
   { href: '/dashboard/analytics', label: 'Analytics' },
 ];

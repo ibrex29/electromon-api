@@ -9,6 +9,14 @@ import {
 type PartyTotals = Record<string, number>;
 type PuStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
 type RollupStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+export type SeedOutcome =
+  | 'WIN'
+  | 'LOSS'
+  | 'TIE'
+  | 'CLOSE_WIN'
+  | 'CLOSE_LOSS'
+  | 'LANDSLIDE_WIN'
+  | 'LANDSLIDE_LOSS';
 
 function sumPartyMaps(values: PartyTotals[]): PartyTotals {
   if (values.length === 0) return {};
@@ -24,53 +32,189 @@ function sumPartyMaps(values: PartyTotals[]): PartyTotals {
 
 /** Deterministic sample votes — major parties lead; others share remainder */
 export function generateSamplePartyResults(index: number, partyCodes: string[]): PartyTotals {
-  const registered = 450 + (index * 37) % 550;
-  const turnout = 0.55 + (index % 7) * 0.04;
-  const votesCast = Math.round(registered * turnout);
+  return generateOutcomePartyResults('WIN', index, partyCodes);
+}
 
-  const majorWeight = (code: string): number => {
-    switch (code) {
-      case 'APC':
-        return 0.34 + (index % 5) * 0.02;
-      case 'PDP':
-        return 0.26 - (index % 4) * 0.02;
-      case 'NNPP':
-        return 0.1 + (index % 3) * 0.01;
-      case 'LP':
-        return 0.06 + (index % 2) * 0.005;
-      default:
-        return 0;
-    }
-  };
+/**
+ * Build party totals with an explicit APC outcome so Situation Room win/loss
+ * heatmaps are easy to demo (wins, losses, ties, landslides, close races).
+ */
+export function generateOutcomePartyResults(
+  outcome: SeedOutcome,
+  index: number,
+  partyCodes: string[],
+  clientParty = 'APC',
+): PartyTotals {
+  const registered = 420 + (index * 41) % 680;
+  const turnout = 0.52 + (index % 9) * 0.035;
+  const votesCast = Math.max(80, Math.round(registered * turnout));
 
-  const rawWeights = partyCodes.map((code, i) =>
-    majorWeight(code) > 0 ? majorWeight(code) : 0.015 + (i % 7) * 0.002,
-  );
-  const weightSum = rawWeights.reduce((sum, w) => sum + w, 0) || 1;
-  const shares = rawWeights.map((w) => w / weightSum);
+  const shares: Record<string, number> = {};
+  switch (outcome) {
+    case 'LANDSLIDE_WIN':
+      shares.APC = 0.58;
+      shares.PDP = 0.18;
+      shares.NNPP = 0.1;
+      shares.LP = 0.05;
+      break;
+    case 'WIN':
+      shares.APC = 0.42;
+      shares.PDP = 0.28;
+      shares.NNPP = 0.12;
+      shares.LP = 0.06;
+      break;
+    case 'CLOSE_WIN':
+      shares.APC = 0.36;
+      shares.PDP = 0.34;
+      shares.NNPP = 0.12;
+      shares.LP = 0.06;
+      break;
+    case 'TIE':
+      shares.APC = 0.34;
+      shares.PDP = 0.34;
+      shares.NNPP = 0.14;
+      shares.LP = 0.07;
+      break;
+    case 'CLOSE_LOSS':
+      shares.APC = 0.33;
+      shares.PDP = 0.36;
+      shares.NNPP = 0.13;
+      shares.LP = 0.06;
+      break;
+    case 'LOSS':
+      shares.APC = 0.26;
+      shares.PDP = 0.4;
+      shares.NNPP = 0.16;
+      shares.LP = 0.07;
+      break;
+    case 'LANDSLIDE_LOSS':
+      shares.APC = 0.18;
+      shares.PDP = 0.52;
+      shares.NNPP = 0.14;
+      shares.LP = 0.06;
+      break;
+  }
 
-  let remaining = votesCast;
+  // Rotate which opposition leads on some losses (PDP vs NNPP)
+  if ((outcome === 'LOSS' || outcome === 'LANDSLIDE_LOSS' || outcome === 'CLOSE_LOSS') && index % 5 === 0) {
+    const pdp = shares.PDP ?? 0.35;
+    const nnpp = shares.NNPP ?? 0.12;
+    shares.PDP = nnpp;
+    shares.NNPP = pdp;
+  }
+
   const results: PartyTotals = {};
+  let remaining = votesCast;
+  const ordered = [...partyCodes];
 
-  for (let i = 0; i < partyCodes.length; i++) {
-    const code = partyCodes[i]!;
-    if (i === partyCodes.length - 1) {
+  for (let i = 0; i < ordered.length; i++) {
+    const code = ordered[i]!;
+    if (i === ordered.length - 1) {
       results[code] = Math.max(0, remaining);
-    } else {
-      const votes = Math.round(votesCast * (shares[i] ?? 0));
-      results[code] = votes;
-      remaining -= votes;
+      break;
     }
+    const base = shares[code] ?? 0.012 + (i % 6) * 0.002;
+    let votes = Math.round(votesCast * base);
+    // Keep exact APC/PDP equality on ties
+    if (outcome === 'TIE' && code === 'PDP' && clientParty === 'APC') {
+      votes = results.APC ?? votes;
+    }
+    results[code] = votes;
+    remaining -= votes;
+  }
+
+  // Safety: ensure intended leader actually leads after rounding
+  const apc = results[clientParty] ?? 0;
+  if (outcome === 'WIN' || outcome === 'CLOSE_WIN' || outcome === 'LANDSLIDE_WIN') {
+    const rival = Math.max(
+      0,
+      ...partyCodes.filter((c) => c !== clientParty).map((c) => results[c] ?? 0),
+    );
+    if (apc <= rival) results[clientParty] = rival + 8 + (index % 5);
+  }
+  if (outcome === 'LOSS' || outcome === 'CLOSE_LOSS' || outcome === 'LANDSLIDE_LOSS') {
+    const rivalCode = partyCodes.find((c) => c !== clientParty && (results[c] ?? 0) > 0) ?? 'PDP';
+    const rival = results[rivalCode] ?? 0;
+    if (apc >= rival) {
+      results[rivalCode] = apc + 11 + (index % 7);
+    }
+  }
+  if (outcome === 'TIE') {
+    const rivalCode = partyCodes.includes('PDP') ? 'PDP' : partyCodes.find((c) => c !== clientParty);
+    if (rivalCode) results[rivalCode] = results[clientParty] ?? 0;
   }
 
   return results;
 }
+
+/** Pick a varied outcome for demo seed rows. */
+export function pickSeedOutcome(index: number): SeedOutcome {
+  const cycle: SeedOutcome[] = [
+    'WIN',
+    'LOSS',
+    'CLOSE_WIN',
+    'LANDSLIDE_LOSS',
+    'WIN',
+    'CLOSE_LOSS',
+    'TIE',
+    'LOSS',
+    'LANDSLIDE_WIN',
+    'LOSS',
+    'WIN',
+    'CLOSE_LOSS',
+    'LANDSLIDE_LOSS',
+    'WIN',
+    'TIE',
+  ];
+  return cycle[index % cycle.length]!;
+}
+
+/** Explicit LGA outcome map for statewide Situation Room testing. */
+export const LGA_OUTCOME_OVERRIDES: Record<string, SeedOutcome | 'PENDING'> = {
+  // APC strongholds
+  Auyo: 'LANDSLIDE_WIN',
+  Hadejia: 'WIN',
+  KafinHausa: 'WIN',
+  'Kafin Hausa': 'WIN',
+  Kaugama: 'CLOSE_WIN',
+  MalamMadori: 'WIN',
+  'Malam Madori': 'WIN',
+  Birniwa: 'WIN',
+  Biriniwa: 'WIN',
+  Guri: 'CLOSE_WIN',
+  // Competitive / APC struggles
+  Dutse: 'LANDSLIDE_LOSS',
+  Gumel: 'LOSS',
+  Ringim: 'CLOSE_LOSS',
+  Kazaure: 'LOSS',
+  'Birnin Kudu': 'LANDSLIDE_LOSS',
+  Jahun: 'LOSS',
+  Gwaram: 'CLOSE_LOSS',
+  Babura: 'LOSS',
+  Taura: 'CLOSE_LOSS',
+  Kiyawa: 'LOSS',
+  Maigatari: 'LANDSLIDE_LOSS',
+  Roni: 'LOSS',
+  Garki: 'CLOSE_LOSS',
+  SuleTankarkar: 'LOSS',
+  'Sule Tankarkar': 'LOSS',
+  // Ties + unfinished
+  Buji: 'TIE',
+  Gwiwa: 'TIE',
+  Yankwashi: 'PENDING',
+  Gagarawa: 'PENDING',
+  Miga: 'CLOSE_WIN',
+  'Kiri Kasama': 'WIN',
+  Kirikasamma: 'WIN',
+};
 
 interface SeedPuResultInput {
   puId: string;
   index: number;
   partyCodes: string[];
   status: PuStatus;
+  outcome?: SeedOutcome;
+  partyResults?: PartyTotals;
   submittedById?: string;
   approvedById?: string;
   rejectionReason?: string;
@@ -128,7 +272,9 @@ export async function seedPollingUnitResult(
   campaignId: string,
   input: SeedPuResultInput,
 ) {
-  const partyResults = generateSamplePartyResults(input.index, input.partyCodes);
+  const partyResults =
+    input.partyResults ??
+    generateOutcomePartyResults(input.outcome ?? pickSeedOutcome(input.index), input.index, input.partyCodes);
   const votesCast = Object.values(partyResults).reduce((sum, n) => sum + n, 0);
   const registeredVoters = votesCast + 120 + (input.index % 80);
   const accreditedVoters = votesCast + (input.index % 12);
@@ -387,6 +533,13 @@ export async function seedHadejiaCollationResults(
       incompleteWardId = ward.id;
     }
 
+    // Whole-ward electoral story for Situation Room (APC win/loss mix inside Hadejia)
+    const wardOutcome: SeedOutcome = isAtafi
+      ? 'CLOSE_WIN'
+      : ward.id === incompleteWardId
+        ? 'CLOSE_LOSS'
+        : pickSeedOutcome(wardIndex + 3);
+
     for (const [puPos, pu] of ward.pollingUnits.entries()) {
       const status = resolvePuStatus({
         isAtafi,
@@ -399,11 +552,23 @@ export async function seedHadejiaCollationResults(
         puIndex,
       });
 
+      // Within a ward, mostly follow wardOutcome; sprinkle opposite pockets
+      let puOutcome: SeedOutcome = wardOutcome;
+      if (puPos % 6 === 5) {
+        puOutcome =
+          wardOutcome === 'WIN' || wardOutcome === 'CLOSE_WIN' || wardOutcome === 'LANDSLIDE_WIN'
+            ? 'LOSS'
+            : 'WIN';
+      } else if (puPos % 8 === 4) {
+        puOutcome = 'TIE';
+      }
+
       const seeded = await seedPollingUnitResult(prisma, campaignId, {
         puId: pu.id,
         index: puIndex,
         partyCodes,
         status,
+        outcome: puOutcome,
         submittedById: puOfficerId,
         approvedById: wardOfficerId,
         rejectionReason:
@@ -581,7 +746,15 @@ export async function seedStateLgaSummaries(
     orderBy: { name: 'asc' },
   });
 
+  const summary = {
+    win: 0,
+    loss: 0,
+    tie: 0,
+    pending: 0,
+  };
+
   for (const [index, lga] of lgas.entries()) {
+    const override = LGA_OUTCOME_OVERRIDES[lga.name] ?? pickSeedOutcome(index + 17);
     const existing = await prisma.collationResult.findFirst({
       where: {
         campaignId,
@@ -590,21 +763,157 @@ export async function seedStateLgaSummaries(
       },
     });
 
-    if (existing) continue;
+    // Keep Hadejia rollup from detailed ward seed unless missing
+    if (existing && lga.name.toUpperCase() === 'HADEJIA') {
+      summary.win += 1;
+      continue;
+    }
 
-    const partyResults = generateSamplePartyResults(index + 10, partyCodes);
+    if (override === 'PENDING') {
+      if (existing) {
+        await prisma.collationResult.delete({ where: { id: existing.id } });
+      }
+      summary.pending += 1;
+      continue;
+    }
+
+    const partyResults = generateOutcomePartyResults(override, index + 10, partyCodes);
     const votesCast = Object.values(partyResults).reduce((sum, n) => sum + n, 0);
+    const status =
+      index % 9 === 0 ? CollationResultStatus.SUBMITTED : CollationResultStatus.APPROVED;
 
-    await prisma.collationResult.create({
-      data: {
-        campaignId,
-        level: CollationLevel.LGA,
-        scopeType: ScopeType.LGA,
-        scopeId: lga.id,
-        partyResults,
-        votesCast,
-        status: CollationResultStatus.APPROVED,
+    if (existing) {
+      await prisma.collationResult.update({
+        where: { id: existing.id },
+        data: { partyResults, votesCast, status },
+      });
+    } else {
+      await prisma.collationResult.create({
+        data: {
+          campaignId,
+          level: CollationLevel.LGA,
+          scopeType: ScopeType.LGA,
+          scopeId: lga.id,
+          partyResults,
+          votesCast,
+          status,
+        },
+      });
+    }
+
+    if (override === 'TIE') summary.tie += 1;
+    else if (
+      override === 'LOSS' ||
+      override === 'CLOSE_LOSS' ||
+      override === 'LANDSLIDE_LOSS'
+    ) {
+      summary.loss += 1;
+    } else summary.win += 1;
+  }
+
+  return summary;
+}
+
+/**
+ * Deep seed for competitive / opposition LGAs so Situation Room drill-down
+ * shows ward + PU losses (not only LGA choropleth).
+ */
+export async function seedCompetitiveLgaTrees(
+  prisma: PrismaClient,
+  campaignId: string,
+  stateId: string,
+  partyCodes: string[],
+  actors: ActorIds = {},
+) {
+  const targetNames = [
+    'Dutse',
+    'Gumel',
+    'Ringim',
+    'Kazaure',
+    'Birnin Kudu',
+    'Jahun',
+    'Gwaram',
+    'Babura',
+    'Maigatari',
+    'Taura',
+  ];
+
+  let seededPus = 0;
+  let seededWards = 0;
+  let seededLgas = 0;
+  let puIndex = 5000;
+
+  for (const [lgaPos, name] of targetNames.entries()) {
+    const lga = await prisma.lGA.findFirst({
+      where: { stateId, name: { equals: name, mode: 'insensitive' } },
+      include: {
+        wards: {
+          include: { pollingUnits: { orderBy: { code: 'asc' }, take: 12 } },
+          orderBy: { name: 'asc' },
+        },
       },
     });
+    if (!lga) continue;
+
+    const lgaOutcome =
+      (LGA_OUTCOME_OVERRIDES[lga.name] as SeedOutcome | undefined) ??
+      (lgaPos % 2 === 0 ? 'LANDSLIDE_LOSS' : 'LOSS');
+    if (lgaOutcome === ('PENDING' as string)) continue;
+
+    seededLgas += 1;
+
+    for (const [wardIndex, ward] of lga.wards.entries()) {
+      // Mix: most wards follow LGA loss story; a few APC pockets survive
+      const wardOutcome: SeedOutcome =
+        wardIndex % 5 === 0
+          ? 'CLOSE_WIN'
+          : wardIndex % 7 === 0
+            ? 'TIE'
+            : wardIndex % 3 === 0
+              ? 'LANDSLIDE_LOSS'
+              : lgaOutcome === 'LANDSLIDE_LOSS'
+                ? 'LOSS'
+                : 'CLOSE_LOSS';
+
+      for (const [puPos, pu] of ward.pollingUnits.entries()) {
+        const puOutcome: SeedOutcome =
+          puPos % 7 === 0 ? 'WIN' : puPos % 5 === 0 ? 'TIE' : wardOutcome;
+        const status: PuStatus =
+          puPos === ward.pollingUnits.length - 1 && wardIndex % 4 === 1
+            ? 'SUBMITTED'
+            : 'APPROVED';
+
+        await seedPollingUnitResult(prisma, campaignId, {
+          puId: pu.id,
+          index: puIndex,
+          partyCodes,
+          status,
+          outcome: puOutcome,
+          submittedById: actors.puOfficerId,
+          approvedById: actors.wardOfficerId,
+          includeEc8a: true,
+          hoursAgo: 3 + (puPos % 8),
+        });
+        puIndex += 1;
+        seededPus += 1;
+      }
+
+      const wardStatus: RollupStatus =
+        wardIndex % 6 === 1 ? 'SUBMITTED' : 'APPROVED';
+      await seedWardRollupFromPus(prisma, campaignId, ward.id, partyCodes, {
+        status: wardStatus,
+        approvedOnly: true,
+        submittedById: actors.wardOfficerId,
+        approvedById: actors.lgaOfficerId,
+      });
+      seededWards += 1;
+    }
+
+    await seedLgaRollupFromWards(prisma, campaignId, lga.id, partyCodes, {
+      status: 'APPROVED',
+      approvedOnly: true,
+    });
   }
+
+  return { seededLgas, seededWards, seededPus };
 }

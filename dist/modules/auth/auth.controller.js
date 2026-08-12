@@ -91,11 +91,11 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "refresh", null);
 __decorate([
+    (0, auth_decorators_1.Public)(),
     (0, common_1.Post)('logout'),
-    (0, swagger_1.ApiBearerAuth)(swagger_config_1.SWAGGER_BEARER_AUTH),
     (0, swagger_1.ApiOperation)({
         summary: 'Logout and revoke refresh token',
-        description: 'Invalidates the provided refresh token.',
+        description: 'Invalidates the provided refresh token. Does not require a valid access token.',
     }),
     (0, swagger_1.ApiOkResponse)({ type: api_response_dto_1.MessageResponseDto }),
     __param(0, (0, common_1.Body)()),

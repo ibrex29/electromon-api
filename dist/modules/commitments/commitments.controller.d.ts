@@ -15,8 +15,8 @@ export declare class CommitmentsController {
         campaignId: string;
         description: string | null;
         title: string;
-        updatedAt: Date;
         status: import("db/dist").$Enums.CommitmentStatus;
+        updatedAt: Date;
         supportGroupId: string;
         targetValue: number;
         currentValue: number;
@@ -33,8 +33,8 @@ export declare class CommitmentsController {
         campaignId: string;
         description: string | null;
         title: string;
-        updatedAt: Date;
         status: import("db/dist").$Enums.CommitmentStatus;
+        updatedAt: Date;
         supportGroupId: string;
         targetValue: number;
         currentValue: number;
@@ -51,8 +51,8 @@ export declare class CommitmentsController {
         campaignId: string;
         description: string | null;
         title: string;
-        updatedAt: Date;
         status: import("db/dist").$Enums.CommitmentStatus;
+        updatedAt: Date;
         supportGroupId: string;
         targetValue: number;
         currentValue: number;
@@ -69,8 +69,8 @@ export declare class CommitmentsController {
         campaignId: string;
         description: string | null;
         title: string;
-        updatedAt: Date;
         status: import("db/dist").$Enums.CommitmentStatus;
+        updatedAt: Date;
         supportGroupId: string;
         targetValue: number;
         currentValue: number;

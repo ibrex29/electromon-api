@@ -64,11 +64,11 @@ export class AuthController {
     return this.authService.refresh(dto.refreshToken);
   }
 
+  @Public()
   @Post('logout')
-  @ApiBearerAuth(SWAGGER_BEARER_AUTH)
   @ApiOperation({
     summary: 'Logout and revoke refresh token',
-    description: 'Invalidates the provided refresh token.',
+    description: 'Invalidates the provided refresh token. Does not require a valid access token.',
   })
   @ApiOkResponse({ type: MessageResponseDto })
   logout(@Body() dto: RefreshTokenDto) {

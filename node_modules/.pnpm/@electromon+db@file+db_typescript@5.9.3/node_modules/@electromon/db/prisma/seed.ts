@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { PrismaClient, Prisma, CampaignRole, ScopeType, SupportGroupCategory, VerificationStatus, CommitmentStatus, FieldReportType, FieldReportStatus, IncidentType, IncidentSeverity, SituationStatus } from '../src/generated/client';
 import { createPgAdapter } from '../src/client';
 import { seedJigawaInecFromDirectory } from './seed-inec';
-import { seedHadejiaCollationResults, seedStateLgaSummaries } from './seed-collation';
+import { seedCompetitiveLgaTrees, seedHadejiaCollationResults, seedStateLgaSummaries } from './seed-collation';
 import * as bcrypt from 'bcrypt';
 
 import { NIGERIAN_REGISTERED_PARTIES } from '../../shared/src/parties';
@@ -275,7 +275,7 @@ async function main() {
     seededOfficers[officer.email] = user.id;
   }
 
-  console.log('Seeding collation results (Hadejia scenarios + state LGA fill)...');
+  console.log('Seeding collation results (Hadejia + statewide win/loss mix)...');
   const hadejiaStats = await seedHadejiaCollationResults(
     prisma,
     campaign.id,
@@ -287,9 +287,31 @@ async function main() {
       lgaOfficerId: seededOfficers['lga.officer@electromon.ng'],
     },
   );
-  await seedStateLgaSummaries(prisma, campaign.id, jigawa.id, PARTY_CODES);
+  const lgaOutcomeSummary = await seedStateLgaSummaries(
+    prisma,
+    campaign.id,
+    jigawa.id,
+    PARTY_CODES,
+  );
+  const competitive = await seedCompetitiveLgaTrees(
+    prisma,
+    campaign.id,
+    jigawa.id,
+    PARTY_CODES,
+    {
+      puOfficerId: seededOfficers['pu.agent@electromon.ng'],
+      wardOfficerId: seededOfficers['ward.officer@electromon.ng'],
+      lgaOfficerId: seededOfficers['lga.officer@electromon.ng'],
+    },
+  );
   console.log(
     `  Hadejia: ${hadejiaStats.seededPus} PUs, ${hadejiaStats.seededWards} wards with scenario results`,
+  );
+  console.log(
+    `  LGA heatmap seed → win/close-win: ${lgaOutcomeSummary.win}, loss: ${lgaOutcomeSummary.loss}, tie: ${lgaOutcomeSummary.tie}, pending: ${lgaOutcomeSummary.pending}`,
+  );
+  console.log(
+    `  Competitive LGA trees: ${competitive.seededLgas} LGAs, ${competitive.seededWards} wards, ${competitive.seededPus} PUs (APC under-performance cases)`,
   );
   console.log(`  Campaign party: ${CLIENT_PARTY_CODE} · Tracking: ${PARTY_CODES.join(', ')}`);
   if (hadejiaStats.incompleteWardId) {
@@ -576,6 +598,59 @@ async function main() {
     }
   }
 
+  // Extra incidents in APC-struggle LGAs for Situation Room incident heatmap
+  const incidentHotspots = ['Dutse', 'Gumel', 'Ringim', 'Kazaure', 'Birnin Kudu', 'Maigatari'];
+  const incidentSpecs = [
+    { type: IncidentType.VIOLENCE_THUGGERY, severity: IncidentSeverity.CRITICAL, urgent: true },
+    { type: IncidentType.BALLOT_SNATCHING, severity: IncidentSeverity.HIGH, urgent: true },
+    { type: IncidentType.VOTE_BUYING, severity: IncidentSeverity.HIGH, urgent: true },
+    { type: IncidentType.BVAS_MALFUNCTION, severity: IncidentSeverity.MEDIUM, urgent: false },
+    { type: IncidentType.OPPOSITION_DISRUPTION, severity: IncidentSeverity.MEDIUM, urgent: false },
+    { type: IncidentType.VOTER_INTIMIDATION, severity: IncidentSeverity.HIGH, urgent: true },
+  ] as const;
+  let hotspotIncidents = 0;
+  for (const lgaName of incidentHotspots) {
+    const hotspotLga = await prisma.lGA.findFirst({
+      where: { stateId: jigawa.id, name: { equals: lgaName, mode: 'insensitive' } },
+      include: {
+        wards: {
+          take: 3,
+          include: { pollingUnits: { take: 2, orderBy: { code: 'asc' } } },
+          orderBy: { name: 'asc' },
+        },
+      },
+    });
+    if (!hotspotLga) continue;
+    for (const [wi, hotspotWard] of hotspotLga.wards.entries()) {
+      for (const [pi, hotspotPu] of hotspotWard.pollingUnits.entries()) {
+        const spec = incidentSpecs[(wi + pi) % incidentSpecs.length]!;
+        const title = `${lgaName} · ${spec.type.replace(/_/g, ' ')} @ ${hotspotPu.code}`;
+        const existing = await prisma.fieldReport.findFirst({
+          where: { campaignId: campaign.id, title },
+        });
+        if (existing) continue;
+        await prisma.fieldReport.create({
+          data: {
+            campaignId: campaign.id,
+            reportedById: seededOfficers['pu.agent@electromon.ng'] ?? director.id,
+            type: FieldReportType.INCIDENT,
+            incidentType: spec.type,
+            incidentSeverity: spec.severity,
+            title,
+            description: `Seeded hotspot incident for Situation Room testing in ${lgaName} (${hotspotWard.name}).`,
+            wardId: hotspotWard.id,
+            pollingUnitId: hotspotPu.id,
+            isUrgent: spec.urgent,
+            status: FieldReportStatus.OPEN,
+            photoUrls: [],
+          },
+        });
+        hotspotIncidents += 1;
+      }
+    }
+  }
+  console.log(`  Incident hotspots seeded: ${hotspotIncidents} open reports in APC-struggle LGAs`);
+
   console.log('Seed complete.');
   console.log('  Campaign:', campaign.name);
   console.log('  Password for all accounts: ChangeMe123!');
@@ -590,6 +665,8 @@ async function main() {
   console.log('    (also accepted as 080… form, e.g. 08000000004)');
   console.log('');
   console.log('  Suggested test cases:');
+  console.log('    Situation Room → Win/Loss: Dutse/Gumel/Ringim should show APC LOSS (red)');
+  console.log('    Situation Room → Incidents: heat around Dutse, Gumel, Kazaure, Maigatari');
   console.log('    PU agent   → draft/submit 17-13-01-001, upload EC8A, report incidents');
   console.log('    Ward officer → ATAFI: await approval PUs, returned PU, LGA-returned ward banner');
   console.log('    LGA officer  → filters (awaiting / approved / returned), approve only when PUs complete');

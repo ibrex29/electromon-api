@@ -20,9 +20,9 @@ export declare class StructureService {
         };
     } & {
         id: string;
+        createdAt: Date;
         name: string;
         code: string;
-        createdAt: Date;
         updatedAt: Date;
     })[]>;
     getLgasByState(stateId: string): import("db/dist").Prisma.PrismaPromise<({
@@ -31,15 +31,15 @@ export declare class StructureService {
         };
         senatorialDistrict: {
             id: string;
-            name: string;
             createdAt: Date;
+            name: string;
             updatedAt: Date;
             stateId: string;
         } | null;
     } & {
         id: string;
-        name: string;
         createdAt: Date;
+        name: string;
         updatedAt: Date;
         stateId: string;
         senatorialDistrictId: string | null;
@@ -51,28 +51,28 @@ export declare class StructureService {
         };
     } & {
         id: string;
-        name: string;
         createdAt: Date;
-        updatedAt: Date;
-        registrationAreaCode: string | null;
+        name: string;
         lgaId: string;
         latitude: number | null;
         longitude: number | null;
+        updatedAt: Date;
+        registrationAreaCode: string | null;
     })[]>;
     getPollingUnitsByWard(wardId: string): import("db/dist").Prisma.PrismaPromise<{
         id: string;
-        name: string;
-        code: string;
         createdAt: Date;
-        updatedAt: Date;
+        name: string;
+        wardId: string;
+        code: string;
         latitude: number | null;
         longitude: number | null;
-        wardId: string;
         strengthAssessment: import("db/dist").$Enums.PollingUnitStrength | null;
         status: import("db/dist").$Enums.PollingUnitStatus;
         assignedAgentId: string | null;
         historicalResults: import("db/dist/generated/runtime/client").JsonValue | null;
         notes: string | null;
+        updatedAt: Date;
     }[]>;
     getCoverageStats(campaignId: string): Promise<{
         campaignId: string;

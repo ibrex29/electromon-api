@@ -5,16 +5,16 @@ export declare class CampaignController {
     constructor(campaignService: CampaignService);
     list(user: JwtPayload): import("db/dist").Prisma.PrismaPromise<({
         _count: {
-            volunteers: number;
             fieldReports: number;
+            volunteers: number;
             supportGroups: number;
         };
         state: {
             id: string;
             createdAt: Date;
             name: string;
-            updatedAt: Date;
             code: string;
+            updatedAt: Date;
         };
     } & {
         id: string;
@@ -46,10 +46,10 @@ export declare class CampaignController {
                     createdAt: Date;
                     name: string;
                     lgaId: string;
-                    updatedAt: Date;
-                    registrationAreaCode: string | null;
                     latitude: number | null;
                     longitude: number | null;
+                    updatedAt: Date;
+                    registrationAreaCode: string | null;
                 })[];
             } & {
                 id: string;
@@ -63,8 +63,8 @@ export declare class CampaignController {
             id: string;
             createdAt: Date;
             name: string;
-            updatedAt: Date;
             code: string;
+            updatedAt: Date;
         };
     } & {
         id: string;

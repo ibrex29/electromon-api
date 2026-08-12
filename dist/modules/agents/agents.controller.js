@@ -22,6 +22,14 @@ const current_user_decorator_1 = require("../../common/decorators/current-user.d
 const swagger_config_1 = require("../../common/swagger/swagger.config");
 const agents_service_1 = require("./agents.service");
 const agents_dto_1 = require("./dto/agents.dto");
+const AGENT_VIEW_ROLES = [
+    shared_1.CampaignRole.CAMPAIGN_DIRECTOR,
+    shared_1.CampaignRole.CANDIDATE,
+    shared_1.CampaignRole.STATE_COLLATION_OFFICER,
+    shared_1.CampaignRole.LGA_COLLATION_OFFICER,
+    shared_1.CampaignRole.WARD_RA_OFFICER,
+];
+const AGENT_MANAGE_ROLES = [shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.CANDIDATE];
 let AgentsController = class AgentsController {
     agentsService;
     constructor(agentsService) {
@@ -36,14 +44,20 @@ let AgentsController = class AgentsController {
     listActivities(user, membershipId) {
         return this.agentsService.listActivities(user, membershipId);
     }
+    create(user, dto) {
+        return this.agentsService.create(user, dto);
+    }
+    update(user, membershipId, dto) {
+        return this.agentsService.update(user, membershipId, dto);
+    }
 };
 exports.AgentsController = AgentsController;
 __decorate([
     openapi.ApiQuery({ name: "lgaId", required: false }),
     (0, common_1.Get)('options'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.WARD_RA_OFFICER),
+    (0, auth_decorators_1.Roles)(...AGENT_VIEW_ROLES),
     (0, swagger_1.ApiOperation)({
-        summary: 'List wards/PUs for filters (LGA) or own ward PUs (ward officer)',
+        summary: 'List wards/PUs for filters (LGA/admin) or own ward PUs (ward officer)',
     }),
     openapi.ApiResponse({ status: 200, type: Object }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
@@ -55,9 +69,9 @@ __decorate([
 ], AgentsController.prototype, "listOptions", null);
 __decorate([
     (0, common_1.Get)(),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.WARD_RA_OFFICER),
+    (0, auth_decorators_1.Roles)(...AGENT_VIEW_ROLES),
     (0, swagger_1.ApiOperation)({
-        summary: 'List agents (LGA: ward+PU; ward officer: PU agents in assigned ward)',
+        summary: 'List agents (admin/LGA: ward+PU; ward officer: PU agents in assigned ward)',
     }),
     (0, swagger_1.ApiOkResponse)({ type: [agents_dto_1.AgentResponseDto] }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
@@ -68,7 +82,7 @@ __decorate([
 ], AgentsController.prototype, "list", null);
 __decorate([
     (0, common_1.Get)(':membershipId/activities'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.WARD_RA_OFFICER),
+    (0, auth_decorators_1.Roles)(...AGENT_VIEW_ROLES),
     (0, swagger_1.ApiOperation)({ summary: 'Collation and incident activity for an agent' }),
     openapi.ApiResponse({ status: 200 }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
@@ -77,6 +91,29 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], AgentsController.prototype, "listActivities", null);
+__decorate([
+    (0, common_1.Post)(),
+    (0, auth_decorators_1.Roles)(...AGENT_MANAGE_ROLES),
+    (0, swagger_1.ApiOperation)({ summary: 'Create or assign a ward officer / PU agent (system admin)' }),
+    (0, swagger_1.ApiOkResponse)({ type: agents_dto_1.AgentResponseDto }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, agents_dto_1.CreateAgentDto]),
+    __metadata("design:returntype", void 0)
+], AgentsController.prototype, "create", null);
+__decorate([
+    (0, common_1.Patch)(':membershipId'),
+    (0, auth_decorators_1.Roles)(...AGENT_MANAGE_ROLES),
+    (0, swagger_1.ApiOperation)({ summary: 'Update a ward officer / PU agent (system admin)' }),
+    (0, swagger_1.ApiOkResponse)({ type: agents_dto_1.AgentResponseDto }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('membershipId')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, agents_dto_1.UpdateAgentDto]),
+    __metadata("design:returntype", void 0)
+], AgentsController.prototype, "update", null);
 exports.AgentsController = AgentsController = __decorate([
     (0, swagger_1.ApiTags)('agents'),
     (0, swagger_1.ApiBearerAuth)(swagger_config_1.SWAGGER_BEARER_AUTH),

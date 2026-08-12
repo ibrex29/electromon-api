@@ -17,9 +17,9 @@ export declare class SupportGroupsService {
         campaignId: string;
         name: string;
         lgaId: string | null;
-        updatedAt: Date;
         latitude: number | null;
         longitude: number | null;
+        updatedAt: Date;
         category: import("@electromon/db").$Enums.SupportGroupCategory;
         leaderName: string;
         leaderPhone: string;
@@ -40,9 +40,9 @@ export declare class SupportGroupsService {
         campaignId: string;
         name: string;
         lgaId: string | null;
-        updatedAt: Date;
         latitude: number | null;
         longitude: number | null;
+        updatedAt: Date;
         category: import("@electromon/db").$Enums.SupportGroupCategory;
         leaderName: string;
         leaderPhone: string;
@@ -63,9 +63,9 @@ export declare class SupportGroupsService {
         campaignId: string;
         name: string;
         lgaId: string | null;
-        updatedAt: Date;
         latitude: number | null;
         longitude: number | null;
+        updatedAt: Date;
         category: import("@electromon/db").$Enums.SupportGroupCategory;
         leaderName: string;
         leaderPhone: string;
@@ -86,9 +86,9 @@ export declare class SupportGroupsService {
         campaignId: string;
         name: string;
         lgaId: string | null;
-        updatedAt: Date;
         latitude: number | null;
         longitude: number | null;
+        updatedAt: Date;
         category: import("@electromon/db").$Enums.SupportGroupCategory;
         leaderName: string;
         leaderPhone: string;

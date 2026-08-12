@@ -30,6 +30,39 @@ let CollationService = class CollationService {
         if (!user.role || !user.campaignId) {
             throw new common_1.ForbiddenException('No active campaign membership');
         }
+        if ((0, shared_1.isCampaignAdminRole)(user.role)) {
+            const campaign = await this.prisma.campaign.findUnique({
+                where: { id: user.campaignId },
+                include: { state: { select: { id: true, name: true } } },
+            });
+            if (!campaign)
+                throw new common_1.ForbiddenException('Campaign not found');
+            const submittedCount = await this.prisma.collationResult.count({
+                where: {
+                    campaignId: user.campaignId,
+                    level: shared_1.CollationLevel.LGA,
+                    status: shared_1.CollationResultStatus.SUBMITTED,
+                },
+            });
+            return {
+                dashboard: {
+                    level: shared_1.CollationLevel.STATE,
+                    levelLabel: 'Campaign Command (Admin)',
+                    levelOrder: 4,
+                    scopeType: shared_1.ScopeType.STATE,
+                    scopeId: campaign.stateId,
+                    scopeName: campaign.state.name,
+                    canSubmit: false,
+                    canApprove: false,
+                    route: '/dashboard/lgas',
+                },
+                scopeChain: {
+                    state: { id: campaign.state.id, name: campaign.state.name },
+                },
+                pendingApprovals: submittedCount,
+                myResult: null,
+            };
+        }
         const dashboard = await this.scopeResolver.buildDashboard(user.role, user.scopeType, user.scopeId);
         const level = (0, shared_1.getCollationLevelForRole)(user.role);
         const pendingApprovals = level
@@ -55,6 +88,38 @@ let CollationService = class CollationService {
         };
     }
     async listResults(user, status) {
+        if ((0, shared_1.isCampaignAdminRole)(user.role)) {
+            if (!user.campaignId) {
+                throw new common_1.ForbiddenException('No active campaign membership');
+            }
+            const where = {
+                campaignId: user.campaignId,
+                level: shared_1.CollationLevel.LGA,
+            };
+            if (status)
+                where.status = status;
+            const rows = await this.prisma.collationResult.findMany({
+                where,
+                orderBy: { updatedAt: 'desc' },
+                include: {
+                    submittedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+                    approvedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+                },
+                take: 200,
+            });
+            const lgaIds = [...new Set(rows.map((r) => r.scopeId).filter(Boolean))];
+            const lgas = lgaIds.length
+                ? await this.prisma.lGA.findMany({
+                    where: { id: { in: lgaIds } },
+                    select: { id: true, name: true },
+                })
+                : [];
+            const lgaName = new Map(lgas.map((l) => [l.id, l.name]));
+            return rows.map((r) => ({
+                ...r,
+                scopeName: lgaName.get(r.scopeId) ?? r.scopeId,
+            }));
+        }
         this.assertCollationUser(user);
         const level = (0, shared_1.getCollationLevelForRole)(user.role);
         const where = {
@@ -73,6 +138,83 @@ let CollationService = class CollationService {
                 approvedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
             },
         });
+    }
+    async getPollingUnitResultForViewer(user, pollingUnitId) {
+        if (!user.campaignId || !user.role) {
+            throw new common_1.ForbiddenException('No active campaign membership');
+        }
+        const pu = await this.prisma.pollingUnit.findUnique({
+            where: { id: pollingUnitId },
+            include: { ward: { include: { lga: { select: { id: true, stateId: true, name: true } } } } },
+        });
+        if (!pu)
+            throw new common_1.NotFoundException('Polling unit not found');
+        const campaign = await this.prisma.campaign.findUnique({
+            where: { id: user.campaignId },
+            select: { stateId: true },
+        });
+        if (!campaign || pu.ward.lga.stateId !== campaign.stateId) {
+            throw new common_1.ForbiddenException('Polling unit is outside your campaign state');
+        }
+        if ((0, shared_1.isCampaignAdminRole)(user.role)) {
+        }
+        else if (user.role === shared_1.CampaignRole.LGA_COLLATION_OFFICER ||
+            user.scopeType === shared_1.ScopeType.LGA) {
+            if (user.scopeId !== pu.ward.lgaId) {
+                throw new common_1.ForbiddenException('Polling unit is outside your assigned LGA');
+            }
+        }
+        else if (user.role === shared_1.CampaignRole.WARD_RA_OFFICER ||
+            user.scopeType === shared_1.ScopeType.WARD) {
+            if (user.scopeId !== pu.wardId) {
+                throw new common_1.ForbiddenException('Polling unit is outside your assigned ward');
+            }
+        }
+        else if (user.role === shared_1.CampaignRole.POLLING_AGENT ||
+            user.scopeType === shared_1.ScopeType.POLLING_UNIT) {
+            if (user.scopeId !== pollingUnitId) {
+                throw new common_1.ForbiddenException('You can only view your assigned polling unit');
+            }
+        }
+        else {
+            throw new common_1.ForbiddenException('Insufficient permissions');
+        }
+        const result = await this.prisma.collationResult.findFirst({
+            where: {
+                campaignId: user.campaignId,
+                level: shared_1.CollationLevel.POLLING_UNIT,
+                scopeId: pollingUnitId,
+            },
+            include: {
+                submittedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+                approvedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+            },
+        });
+        return {
+            ...(result ?? {}),
+            id: result?.id,
+            status: result?.status ?? null,
+            registeredVoters: result?.registeredVoters ?? null,
+            accreditedVoters: result?.accreditedVoters ?? null,
+            votesCast: result?.votesCast ?? null,
+            partyResults: result?.partyResults ?? null,
+            rejectionReason: result?.rejectionReason ?? null,
+            submittedAt: result?.submittedAt ?? null,
+            ec8aPhotoUrls: result?.ec8aPhotoUrls ?? [],
+            submittedBy: result?.submittedBy ?? null,
+            approvedBy: result?.approvedBy ?? null,
+            approvedAt: result?.approvedAt ?? null,
+            level: result?.level ?? shared_1.CollationLevel.POLLING_UNIT,
+            scopeId: pollingUnitId,
+            pollingUnit: {
+                id: pu.id,
+                name: pu.name,
+                code: pu.code,
+                wardId: pu.wardId,
+                wardName: pu.ward.name,
+                lgaName: pu.ward.lga.name,
+            },
+        };
     }
     async listPendingApprovals(user) {
         this.assertCollationUser(user);
@@ -921,19 +1063,24 @@ let CollationService = class CollationService {
         });
     }
     async listActionLogs(user, resultId) {
-        this.assertCollationUser(user);
+        if (!user.campaignId || !user.role) {
+            throw new common_1.ForbiddenException('No active campaign membership');
+        }
         const result = await this.prisma.collationResult.findUnique({ where: { id: resultId } });
         if (!result)
             throw new common_1.NotFoundException('Collation result not found');
         if (result.campaignId !== user.campaignId) {
             throw new common_1.ForbiddenException('Result is outside your campaign');
         }
-        const ownLevel = (0, shared_1.getCollationLevelForRole)(user.role);
-        const canViewOwn = result.level === ownLevel &&
-            result.scopeType === user.scopeType &&
-            result.scopeId === user.scopeId;
-        if (!canViewOwn) {
-            await this.verifyApproverScope(user, result);
+        if (!(0, shared_1.isCampaignAdminRole)(user.role)) {
+            this.assertCollationUser(user);
+            const ownLevel = (0, shared_1.getCollationLevelForRole)(user.role);
+            const canViewOwn = result.level === ownLevel &&
+                result.scopeType === user.scopeType &&
+                result.scopeId === user.scopeId;
+            if (!canViewOwn) {
+                await this.verifyApproverScope(user, result);
+            }
         }
         return this.prisma.collationActionLog.findMany({
             where: { collationResultId: resultId },

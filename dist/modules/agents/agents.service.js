@@ -58,6 +58,7 @@ let AgentsService = class AgentsService {
     assertViewer(user) {
         const allowed = new Set([
             shared_1.CampaignRole.CAMPAIGN_DIRECTOR,
+            shared_1.CampaignRole.CANDIDATE,
             shared_1.CampaignRole.STATE_COLLATION_OFFICER,
             shared_1.CampaignRole.LGA_COLLATION_OFFICER,
             shared_1.CampaignRole.WARD_RA_OFFICER,
@@ -67,9 +68,9 @@ let AgentsService = class AgentsService {
         }
     }
     assertManager(user) {
-        this.assertViewer(user);
-        if (user.role === shared_1.CampaignRole.WARD_RA_OFFICER) {
-            throw new common_1.ForbiddenException('Ward officers can only view PU agents');
+        const allowed = new Set([shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.CANDIDATE]);
+        if (!user.role || !allowed.has(user.role)) {
+            throw new common_1.ForbiddenException('Only system admin can manage agents');
         }
     }
     async assertAgentVisibleToUser(user, role, scopeId) {
