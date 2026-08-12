@@ -11,8 +11,8 @@ RUN apk add --no-cache libc6-compat
 FROM base AS deps
 WORKDIR /app
 
-COPY pnpm-lock.yaml package.json ./
-COPY db/package.json ./db/
+COPY pnpm-lock.yaml package.json .npmrc ./
+COPY db/package.json db/pnpm-lock.yaml ./db/
 COPY db/prisma.config.ts ./db/
 COPY db/prisma ./db/prisma/
 COPY shared/package.json ./shared/
@@ -47,6 +47,8 @@ COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/package.json ./package.json
 COPY --from=builder --chown=nestjs:nodejs /app/db ./db
 COPY --from=builder --chown=nestjs:nodejs /app/shared ./shared
+
+ENV NODE_PATH=/app/db/node_modules:/app/node_modules
 
 COPY --chown=nestjs:nodejs infra/scripts/entrypoint-api.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
