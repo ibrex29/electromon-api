@@ -1,8 +1,10 @@
 # Electromon API — Infrastructure
 
-Docker Compose stack for the **API project**: PostgreSQL, Redis, RabbitMQ, MinIO, optional API container, and observability.
+Docker Compose stack for the **API project**: PostgreSQL, Redis, RabbitMQ, MinIO, API, Caddy edge, and observability.
 
 Run all commands from the **project root** (not from inside `infra/`).
+
+**Full staging/prod playbook:** [DEPLOY.md](./DEPLOY.md)
 
 ---
 
@@ -31,9 +33,11 @@ make infra-full        # deps + migrate + API container
 |-----------------|-----------|
 | `make infra-up` | `base.yml` + `local.yml` — **deps only** |
 | `make infra-full` | deps + **migrate** + **api** container |
-| `make infra-obs-up` | Prometheus, Grafana, Loki, … |
-| `make infra-staging-up` | Staging overlay + apps |
-| `make infra-prod-up` | Production overlay + apps |
+| `make infra-obs-up` | Prometheus, Grafana, Loki, … (local ports) |
+| `make infra-staging-up` | Staging apps + **Caddy** + secure obs |
+| `make infra-prod-up` | Production apps + **Caddy** + secure obs |
+| `make infra-prod-external-up` | Managed Postgres/Spaces + redis/rabbitmq/api/caddy/obs |
+| `make infra-backup` | `pg_dump` → `infra/backups/` |
 
 ---
 
@@ -46,8 +50,10 @@ make infra-full        # deps + migrate + API container
 | RabbitMQ | 5672 | Management UI 15672 |
 | MinIO (S3) | 9000 | Console 9001 |
 | API (infra-full) | 3001 | NestJS in container |
-| Grafana (obs) | 3030 | `admin` / `electromon` |
+| Grafana (obs) | 3030 | `admin` / `electromon` (change in staging/prod) |
 | Prometheus (obs) | 9090 | |
+
+Staging/production expose **only Caddy 80/443**. App ports stay on the Docker network.
 
 ---
 
@@ -56,21 +62,22 @@ make infra-full        # deps + migrate + API container
 ```
 infra/
 ├── compose/
-│   ├── base.yml              # Postgres, Redis, RabbitMQ, MinIO
-│   ├── local.yml             # Expose ports to host
-│   ├── local.full.yml        # API container ports
-│   ├── apps.yml              # migrate + api services
-│   ├── observability.yml     # Prometheus, Grafana, Loki
-│   ├── staging.yml
-│   ├── production.yml
+│   ├── base.yml
+│   ├── local.yml / local.full.yml
+│   ├── apps.yml
+│   ├── edge.yml                 # Caddy TLS reverse proxy
+│   ├── observability.yml
+│   ├── observability.local.yml
+│   ├── observability.secure.yml
+│   ├── staging.yml / production.yml
 │   └── production.external.yml
+├── caddy/Caddyfile
 ├── dockerfiles/
-│   ├── api.Dockerfile
-│   └── migrate.Dockerfile
-├── observability/            # Grafana dashboards, Prometheus rules
-├── scripts/
-└── env/
-    └── local.env.example     # Copy to electromon-api/.env
+├── observability/
+├── scripts/                     # migrate, deploy, backup, restore
+├── backups/
+├── env/
+└── DEPLOY.md
 ```
 
 ---
@@ -78,10 +85,10 @@ infra/
 ## Environment
 
 ```bash
-make env    # from electromon-api/ — copies infra/env/local.env.example → .env
+make env    # copies infra/env/local.env.example → .env
 ```
 
-For first `make infra-full`, you may set `RUN_SEED=true` in `.env` to seed inside the migrate container (otherwise seed on host with `pnpm db:seed`).
+Templates: `local` · `staging` · `production` under `infra/env/`.
 
 ---
 
@@ -91,13 +98,14 @@ For first `make infra-full`, you may set `RUN_SEED=true` in `.env` to seed insid
 make infra-migrate     # run migrate service once
 ```
 
-With `infra-full`, order is: **postgres → migrate → api**.
+Migrate waits on the **host parsed from `DATABASE_URL`** (works for managed Postgres).
 
 On host (typical dev):
 
 ```bash
 pnpm db:migrate:deploy
-pnpm db:seed
+pnpm db:seed                 # demo only
+pnpm db:seed:production:apc  # production APC bootstrap
 ```
 
 ---
@@ -105,44 +113,24 @@ pnpm db:seed
 ## Observability
 
 ```bash
-make infra-up
-make dev                 # API must run on host :3001 for scraping
+make infra-up && make dev
 make infra-obs-up
 ```
 
 - Grafana: http://localhost:3030
 - Prometheus: http://localhost:9090
+- Slack: set `ALERT_SLACK_WEBHOOK_URL` in `.env`
 
-```bash
-make infra-obs-down
-```
-
----
-
-## Troubleshooting
-
-**Port already in use**
-
-Stop other Postgres/Redis instances or change ports in `.env`.
-
-**Container name conflict** (after moving the repo)
-
-```bash
-make infra-reset
-make infra-up
-```
-
-**API can't connect to Postgres from host**
-
-Ensure `DATABASE_URL` uses `localhost:5432` (not `postgres` hostname) when API runs on host and DB runs in Docker.
+Staging/prod: Grafana on `127.0.0.1` only — use an SSH tunnel.
 
 ---
 
-## Web app
+## Web pairing
 
-The Next.js dashboard is a **separate repo**: [electromon-web](https://github.com/ibrex29/electromon-web).
+Start API staging/prod first (creates `COMPOSE_NETWORK_NAME`), then in **electromon-web**:
 
-Typical local stack:
+```bash
+make infra-staging-up   # or infra-prod-up
+```
 
-1. In this repo: `make infra-up && make dev` → API on :3001
-2. In the web repo: `make install && make env && make dev` → Web on :3000
+Caddy on the API host terminates TLS for both `WEB_HOST` and `API_HOST`.

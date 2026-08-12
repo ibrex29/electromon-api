@@ -1,0 +1,40 @@
+# Build context is the API project root.
+# Keep images lean and never send secrets into the daemon.
+
+.git
+.github
+.gitignore
+.dockerignore
+
+# env & secrets
+.env
+.env.*
+**/.env
+**/*.pem
+infra/observability/prometheus/metrics_token
+infra/backups
+
+# dependencies & build (reinstalled inside image)
+node_modules
+**/node_modules
+dist
+**/dist
+coverage
+.turbo
+*.tsbuildinfo
+.eslintcache
+
+# docs / IDE / local
+docs
+*.md
+!README.md
+.idea
+.vscode
+.DS_Store
+uploads
+**/*.log
+
+# tests not needed in runtime image
+test
+**/*.spec.ts
+**/*.e2e-spec.ts

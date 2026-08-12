@@ -27,8 +27,8 @@ export declare class VolunteersService {
         email: string | null;
         updatedAt: Date;
         coordinatorId: string | null;
-        isVerified: boolean;
         performanceScore: number;
+        isVerified: boolean;
     })[]>;
     findOne(user: JwtPayload, id: string): Promise<{
         ward: {
@@ -51,8 +51,8 @@ export declare class VolunteersService {
         email: string | null;
         updatedAt: Date;
         coordinatorId: string | null;
-        isVerified: boolean;
         performanceScore: number;
+        isVerified: boolean;
     }>;
     create(user: JwtPayload, dto: CreateVolunteerDto): Promise<{
         ward: {
@@ -75,8 +75,8 @@ export declare class VolunteersService {
         email: string | null;
         updatedAt: Date;
         coordinatorId: string | null;
-        isVerified: boolean;
         performanceScore: number;
+        isVerified: boolean;
     }>;
     update(user: JwtPayload, id: string, dto: UpdateVolunteerDto): Promise<{
         ward: {
@@ -99,8 +99,8 @@ export declare class VolunteersService {
         email: string | null;
         updatedAt: Date;
         coordinatorId: string | null;
-        isVerified: boolean;
         performanceScore: number;
+        isVerified: boolean;
     }>;
     remove(user: JwtPayload, id: string): Promise<{
         success: boolean;

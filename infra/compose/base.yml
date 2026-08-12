@@ -1,5 +1,8 @@
 # Electromon — shared infrastructure services
-# Project name comes from COMPOSE_PROJECT_NAME in .env (default: electromon-local)
+# Explicit project name (avoids Docker Desktop labeling the stack "compose"
+# because compose files live under infra/compose/).
+
+name: ${COMPOSE_PROJECT_NAME:-electromon-local}
 
 x-logging: &default-logging
   driver: json-file
@@ -70,7 +73,7 @@ services:
       - electromon
 
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -89,7 +92,7 @@ services:
       - electromon
 
   minio-init:
-    image: minio/mc:latest
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
     depends_on:
       minio:
         condition: service_healthy
@@ -107,6 +110,8 @@ services:
 
 networks:
   electromon:
+    # Stable name so electromon-web can join the same network across repos.
+    name: ${COMPOSE_NETWORK_NAME:-electromon}
     driver: bridge
 
 volumes:

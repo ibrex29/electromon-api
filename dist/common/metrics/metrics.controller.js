@@ -24,7 +24,18 @@ let MetricsController = class MetricsController {
     constructor(metrics) {
         this.metrics = metrics;
     }
-    async scrape(res) {
+    async scrape(req, res) {
+        const token = process.env.METRICS_TOKEN?.trim();
+        if (token) {
+            const header = req.headers.authorization;
+            const bearer = typeof header === 'string' && header.startsWith('Bearer ')
+                ? header.slice('Bearer '.length).trim()
+                : undefined;
+            const queryToken = typeof req.query.token === 'string' ? req.query.token : undefined;
+            if (bearer !== token && queryToken !== token) {
+                throw new common_1.UnauthorizedException('Invalid metrics token');
+            }
+        }
         res.send(await this.metrics.metrics());
     }
 };
@@ -34,9 +45,10 @@ __decorate([
     (0, common_1.Get)(),
     (0, common_1.Header)('Content-Type', 'text/plain; version=0.0.4; charset=utf-8'),
     openapi.ApiResponse({ status: 200 }),
-    __param(0, (0, common_1.Res)()),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], MetricsController.prototype, "scrape", null);
 exports.MetricsController = MetricsController = __decorate([

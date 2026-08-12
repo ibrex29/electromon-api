@@ -18,6 +18,7 @@ x-api-env: &api-env
   API_PORT: "3001"
   CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
   LOG_LEVEL: ${LOG_LEVEL:-info}
+  METRICS_TOKEN: ${METRICS_TOKEN:-}
 
 services:
   migrate:

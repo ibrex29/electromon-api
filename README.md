@@ -135,6 +135,8 @@ pnpm db:generate         # regenerate Prisma client
 
 Production APC seed requires `SEED_ADMIN_PASSWORD` (min 12 chars). See `infra/env/production.env.example`.
 
+Deploy (local / staging / production): see [infra/DEPLOY.md](./infra/DEPLOY.md).
+
 After schema changes:
 
 ```bash

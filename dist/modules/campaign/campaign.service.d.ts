@@ -11,20 +11,20 @@ export declare class CampaignService {
             updatedAt: Date;
         };
         _count: {
-            fieldReports: number;
             volunteers: number;
+            fieldReports: number;
             supportGroups: number;
         };
     } & {
         id: string;
         createdAt: Date;
         name: string;
+        isActive: boolean;
         updatedAt: Date;
         stateId: string;
         slug: string;
         clientPartyCode: string | null;
         trackedParties: import("db/dist/generated/runtime/client").JsonValue | null;
-        isActive: boolean;
     })[]>;
     findById(id: string): Promise<{
         state: {
@@ -44,11 +44,11 @@ export declare class CampaignService {
                     id: string;
                     createdAt: Date;
                     name: string;
+                    lgaId: string;
                     latitude: number | null;
                     longitude: number | null;
                     updatedAt: Date;
                     registrationAreaCode: string | null;
-                    lgaId: string;
                 })[];
             } & {
                 id: string;
@@ -69,11 +69,11 @@ export declare class CampaignService {
         id: string;
         createdAt: Date;
         name: string;
+        isActive: boolean;
         updatedAt: Date;
         stateId: string;
         slug: string;
         clientPartyCode: string | null;
         trackedParties: import("db/dist/generated/runtime/client").JsonValue | null;
-        isActive: boolean;
     }>;
 }

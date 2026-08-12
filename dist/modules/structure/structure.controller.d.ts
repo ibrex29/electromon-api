@@ -4,8 +4,8 @@ export declare class StructureController {
     constructor(structureService: StructureService);
     getStates(): import("db/dist").Prisma.PrismaPromise<({
         _count: {
-            lgas: number;
             campaigns: number;
+            lgas: number;
         };
     } & {
         id: string;
@@ -15,9 +15,6 @@ export declare class StructureController {
         updatedAt: Date;
     })[]>;
     getLgas(stateId: string): import("db/dist").Prisma.PrismaPromise<({
-        _count: {
-            wards: number;
-        };
         senatorialDistrict: {
             id: string;
             createdAt: Date;
@@ -25,6 +22,9 @@ export declare class StructureController {
             updatedAt: Date;
             stateId: string;
         } | null;
+        _count: {
+            wards: number;
+        };
     } & {
         id: string;
         createdAt: Date;
@@ -35,8 +35,8 @@ export declare class StructureController {
     })[]>;
     getWards(lgaId: string): import("db/dist").Prisma.PrismaPromise<({
         _count: {
-            pollingUnits: number;
             volunteers: number;
+            pollingUnits: number;
         };
     } & {
         id: string;
@@ -52,12 +52,12 @@ export declare class StructureController {
         id: string;
         createdAt: Date;
         name: string;
+        status: import("db/dist").$Enums.PollingUnitStatus;
         wardId: string;
         code: string;
         latitude: number | null;
         longitude: number | null;
         strengthAssessment: import("db/dist").$Enums.PollingUnitStrength | null;
-        status: import("db/dist").$Enums.PollingUnitStatus;
         assignedAgentId: string | null;
         historicalResults: import("db/dist/generated/runtime/client").JsonValue | null;
         notes: string | null;

@@ -29,9 +29,9 @@ export declare class SituationRoomController {
     } & {
         id: string;
         createdAt: Date;
+        status: import("db/dist").$Enums.SituationStatus;
         latitude: number | null;
         longitude: number | null;
-        status: import("db/dist").$Enums.SituationStatus;
         notes: string | null;
         reportedById: string;
         pollingUnitId: string;
@@ -51,9 +51,9 @@ export declare class SituationRoomController {
     } & {
         id: string;
         createdAt: Date;
+        status: import("db/dist").$Enums.SituationStatus;
         latitude: number | null;
         longitude: number | null;
-        status: import("db/dist").$Enums.SituationStatus;
         notes: string | null;
         reportedById: string;
         pollingUnitId: string;
@@ -73,9 +73,9 @@ export declare class SituationRoomController {
     } & {
         id: string;
         createdAt: Date;
+        status: import("db/dist").$Enums.SituationStatus;
         latitude: number | null;
         longitude: number | null;
-        status: import("db/dist").$Enums.SituationStatus;
         notes: string | null;
         reportedById: string;
         pollingUnitId: string;
@@ -95,9 +95,9 @@ export declare class SituationRoomController {
     } & {
         id: string;
         createdAt: Date;
+        status: import("db/dist").$Enums.SituationStatus;
         latitude: number | null;
         longitude: number | null;
-        status: import("db/dist").$Enums.SituationStatus;
         notes: string | null;
         reportedById: string;
         pollingUnitId: string;

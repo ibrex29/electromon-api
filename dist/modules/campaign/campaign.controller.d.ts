@@ -4,17 +4,17 @@ export declare class CampaignController {
     private campaignService;
     constructor(campaignService: CampaignService);
     list(user: JwtPayload): import("db/dist").Prisma.PrismaPromise<({
-        _count: {
-            fieldReports: number;
-            volunteers: number;
-            supportGroups: number;
-        };
         state: {
             id: string;
             createdAt: Date;
             name: string;
             code: string;
             updatedAt: Date;
+        };
+        _count: {
+            volunteers: number;
+            fieldReports: number;
+            supportGroups: number;
         };
     } & {
         id: string;

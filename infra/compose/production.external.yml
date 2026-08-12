@@ -1,4 +1,6 @@
 # Production with external managed PostgreSQL + S3 (DigitalOcean Spaces)
+# Local postgres/minio remain defined in base.yml but are not started by
+# `make infra-prod-external-up` (explicit service list).
 
 services:
   migrate:
@@ -22,3 +24,4 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
       S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is required}
       S3_REGION: ${S3_REGION:-nyc3}
+      METRICS_TOKEN: ${METRICS_TOKEN:?METRICS_TOKEN is required}
