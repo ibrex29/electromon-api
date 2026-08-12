@@ -70,7 +70,8 @@ infra/
 │   ├── observability.local.yml
 │   ├── observability.secure.yml
 │   ├── staging.yml / production.yml
-│   └── production.external.yml
+│   ├── production.external.yml
+│   └── dokploy.yml              # Dokploy: full stack including api (no Caddy)
 ├── caddy/Caddyfile
 ├── dockerfiles/
 ├── observability/

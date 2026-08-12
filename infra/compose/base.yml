@@ -1,4 +1,6 @@
-# Electromon — shared infrastructure services
+# Electromon — shared infrastructure services (deps only: postgres, redis, rabbitmq, minio).
+# The Nest API is NOT here — it lives in apps.yml (profile "apps") and in
+# infra/compose/dokploy.yml (Dokploy: attach domain to service "api", port 3001).
 # Explicit project name (avoids Docker Desktop labeling the stack "compose"
 # because compose files live under infra/compose/).
 

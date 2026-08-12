@@ -1,0 +1,181 @@
+# Electromon API — single-file stack for Dokploy
+#
+# Point Dokploy Compose path at this file (not base.yml).
+# base.yml is deps-only; api/migrate live in apps.yml behind profile "apps",
+# so Dokploy cannot attach a domain unless api is declared here.
+#
+# Dokploy UI:
+#   Compose file: infra/compose/dokploy.yml
+#   Isolated Deployments: ON
+#   Domain → service: api  ·  container port: 3001  ·  HTTPS on
+#
+# Do not include Caddy (edge.yml). Dokploy Traefik already binds 80/443.
+
+name: ${COMPOSE_PROJECT_NAME:-electromon}
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-api-env: &api-env
+  NODE_ENV: ${NODE_ENV:-production}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-electromon}:${POSTGRES_PASSWORD:-electromon}@postgres:5432/${POSTGRES_DB:-electromon}?schema=public
+  REDIS_URL: redis://redis:6379
+  RABBITMQ_URL: amqp://${RABBITMQ_USER:-electromon}:${RABBITMQ_PASSWORD:-electromon}@rabbitmq:5672
+  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required}
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+  JWT_ACCESS_EXPIRY: ${JWT_ACCESS_EXPIRY:-15m}
+  JWT_REFRESH_EXPIRY: ${JWT_REFRESH_EXPIRY:-7d}
+  S3_ENDPOINT: http://minio:9000
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:-electromon}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:-electromonsecret}
+  S3_BUCKET: ${S3_BUCKET:-electromon}
+  S3_REGION: ${S3_REGION:-us-east-1}
+  API_PORT: "3001"
+  API_PUBLIC_URL: ${API_PUBLIC_URL:-https://api.electromon.ng}
+  CORS_ORIGIN: ${CORS_ORIGIN:-https://app.electromon.ng}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  METRICS_TOKEN: ${METRICS_TOKEN:?METRICS_TOKEN is required}
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-electromon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-electromon}
+      POSTGRES_DB: ${POSTGRES_DB:-electromon}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../scripts/init-postgres.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-electromon} -d ${POSTGRES_DB:-electromon}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    command: >
+      sh -c "rabbitmq-plugins enable --offline rabbitmq_prometheus &&
+             docker-entrypoint.sh rabbitmq-server"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-electromon}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-electromon}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging: *default-logging
+
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-electromon}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-electromonsecret}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging: *default-logging
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-electromon}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-electromonsecret}
+      S3_BUCKET: ${S3_BUCKET:-electromon}
+    entrypoint: /bin/sh
+    command: /scripts/init-minio.sh
+    volumes:
+      - ../scripts/init-minio.sh:/scripts/init-minio.sh:ro
+    restart: "no"
+
+  migrate:
+    build:
+      context: ../..
+      dockerfile: infra/dockerfiles/migrate.Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-electromon}:${POSTGRES_PASSWORD:-electromon}@postgres:5432/${POSTGRES_DB:-electromon}?schema=public
+      RUN_SEED: ${RUN_SEED:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/dockerfiles/api.Dockerfile
+    environment:
+      <<: *api-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    expose:
+      - "3001"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/v1/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    volumes:
+      - api_uploads:/app/uploads
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  minio_data:
+  api_uploads:

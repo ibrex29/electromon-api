@@ -18,6 +18,22 @@ Shared network name: `COMPOSE_NETWORK_NAME` (e.g. `electromon-staging`).
 
 ---
 
+## Dokploy
+
+`infra/compose/base.yml` is **deps only** (Postgres, Redis, RabbitMQ, MinIO). The Nest API is not in that file, so Dokploy cannot attach a domain to it.
+
+Use the single-file stack instead:
+
+1. Compose service → Compose file: **`infra/compose/dokploy.yml`**
+2. Isolated Deployments: **On**
+3. Do **not** override the compose command (no `--profile apps` needed)
+4. Domains → Add Domain → service **`api`**, container port **`3001`**, HTTPS on
+5. Do not deploy `edge.yml` / Caddy on the same host (Traefik already binds 80/443)
+
+Services in that file: `postgres`, `redis`, `rabbitmq`, `minio`, `minio-init`, `migrate`, **`api`**.
+
+---
+
 ## Local (developer laptop)
 
 ```bash
