@@ -4,7 +4,7 @@
 #   Compose file: infra/compose/dokploy.yml
 #   Isolated Deployments: ON
 #   Advanced → Command: leave EMPTY (delete any custom command)
-#   Domain → service: api  ·  container port: 3001  ·  HTTPS on
+#   Domain → service: api  ·  container port: 3002  ·  HTTPS on
 #
 # Dokploy writes Environment vars to a .env next to this file.
 # Secrets are injected via env_file (not ${VAR:?} interpolation), because
@@ -121,7 +121,7 @@ services:
       - .env
     environment:
       NODE_ENV: production
-      API_PORT: "3001"
+      API_PORT: "3002"
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
     depends_on:

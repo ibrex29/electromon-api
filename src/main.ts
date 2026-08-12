@@ -36,11 +36,11 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, buildSwaggerDocument());
   SwaggerModule.setup('docs', app, document, swaggerCustomOptions);
 
-  const port = process.env.API_PORT ?? 3001;
-  await app.listen(port);
+  const port = Number(process.env.API_PORT ?? 3001);
+  await app.listen(port, '0.0.0.0');
 
   const logger = app.get(Logger);
-  logger.log(`Dan-Modi API running on http://localhost:${port}`);
+  logger.log(`Dan-Modi API running on http://0.0.0.0:${port}`);
   logger.log(`Swagger docs at http://localhost:${port}/docs`);
   logger.log(`Metrics at http://localhost:${port}/api/v1/metrics`);
 }

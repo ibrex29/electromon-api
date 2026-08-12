@@ -49,15 +49,16 @@ COPY --from=builder --chown=nestjs:nodejs /app/db ./db
 COPY --from=builder --chown=nestjs:nodejs /app/shared ./shared
 
 ENV NODE_PATH=/app/db/node_modules:/app/node_modules
+ENV API_PORT=3002
 
 COPY --chown=nestjs:nodejs infra/scripts/entrypoint-api.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 USER nestjs
 
-EXPOSE 3001
+EXPOSE 3002
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD wget -qO- http://localhost:3001/api/v1/health/ready || exit 1
+  CMD wget -qO- http://localhost:3002/api/v1/health/ready || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
