@@ -18,8 +18,11 @@ export class AgentsController {
     CampaignRole.CAMPAIGN_DIRECTOR,
     CampaignRole.STATE_COLLATION_OFFICER,
     CampaignRole.LGA_COLLATION_OFFICER,
+    CampaignRole.WARD_RA_OFFICER,
   )
-  @ApiOperation({ summary: 'List wards and polling units in the LGA (for filters)' })
+  @ApiOperation({
+    summary: 'List wards/PUs for filters (LGA) or own ward PUs (ward officer)',
+  })
   listOptions(
     @CurrentUser() user: JwtPayload,
     @Query('campaignId') campaignId: string,
@@ -33,8 +36,11 @@ export class AgentsController {
     CampaignRole.CAMPAIGN_DIRECTOR,
     CampaignRole.STATE_COLLATION_OFFICER,
     CampaignRole.LGA_COLLATION_OFFICER,
+    CampaignRole.WARD_RA_OFFICER,
   )
-  @ApiOperation({ summary: 'List ward and PU agents in an LGA (read-only)' })
+  @ApiOperation({
+    summary: 'List agents (LGA: ward+PU; ward officer: PU agents in assigned ward)',
+  })
   @ApiOkResponse({ type: [AgentResponseDto] })
   list(@CurrentUser() user: JwtPayload, @Query() query: ListAgentsQueryDto) {
     return this.agentsService.list(user, query);
@@ -45,6 +51,7 @@ export class AgentsController {
     CampaignRole.CAMPAIGN_DIRECTOR,
     CampaignRole.STATE_COLLATION_OFFICER,
     CampaignRole.LGA_COLLATION_OFFICER,
+    CampaignRole.WARD_RA_OFFICER,
   )
   @ApiOperation({ summary: 'Collation and incident activity for an agent' })
   listActivities(

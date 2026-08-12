@@ -34,6 +34,7 @@ const WARD_NAV: DashboardNavItem[] = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/dashboard/ward-review', label: 'Ward Review' },
   { href: '/dashboard/polling-stations', label: 'Polling Stations' },
+  { href: '/dashboard/agents', label: 'Agents' },
 ];
 
 const PU_NAV: DashboardNavItem[] = [

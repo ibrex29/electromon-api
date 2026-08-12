@@ -41,9 +41,11 @@ exports.AgentsController = AgentsController;
 __decorate([
     openapi.ApiQuery({ name: "lgaId", required: false }),
     (0, common_1.Get)('options'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER),
-    (0, swagger_1.ApiOperation)({ summary: 'List wards and polling units in the LGA (for filters)' }),
-    openapi.ApiResponse({ status: 200 }),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.WARD_RA_OFFICER),
+    (0, swagger_1.ApiOperation)({
+        summary: 'List wards/PUs for filters (LGA) or own ward PUs (ward officer)',
+    }),
+    openapi.ApiResponse({ status: 200, type: Object }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Query)('campaignId')),
     __param(2, (0, common_1.Query)('lgaId')),
@@ -53,8 +55,10 @@ __decorate([
 ], AgentsController.prototype, "listOptions", null);
 __decorate([
     (0, common_1.Get)(),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER),
-    (0, swagger_1.ApiOperation)({ summary: 'List ward and PU agents in an LGA (read-only)' }),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.WARD_RA_OFFICER),
+    (0, swagger_1.ApiOperation)({
+        summary: 'List agents (LGA: ward+PU; ward officer: PU agents in assigned ward)',
+    }),
     (0, swagger_1.ApiOkResponse)({ type: [agents_dto_1.AgentResponseDto] }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Query)()),
@@ -64,7 +68,7 @@ __decorate([
 ], AgentsController.prototype, "list", null);
 __decorate([
     (0, common_1.Get)(':membershipId/activities'),
-    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER),
+    (0, auth_decorators_1.Roles)(shared_1.CampaignRole.CAMPAIGN_DIRECTOR, shared_1.CampaignRole.STATE_COLLATION_OFFICER, shared_1.CampaignRole.LGA_COLLATION_OFFICER, shared_1.CampaignRole.WARD_RA_OFFICER),
     (0, swagger_1.ApiOperation)({ summary: 'Collation and incident activity for an agent' }),
     openapi.ApiResponse({ status: 200 }),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),

@@ -9,7 +9,12 @@ import { Prisma } from '@electromon/db';
 import { CampaignRole, JwtPayload, ScopeType } from '@electromon/shared';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { getLgaScopeId, isLgaScopedUser } from '../../common/scoping/campaign-scope';
+import {
+  assertPollingUnitInWard,
+  getLgaScopeId,
+  getWardScopeId,
+  isLgaScopedUser,
+} from '../../common/scoping/campaign-scope';
 import { normalizePhoneNumber, phoneLookupCandidates } from '../auth/phone.util';
 import {
   CreateAgentDto,
@@ -25,15 +30,42 @@ import {
 export class AgentsService {
   constructor(private prisma: PrismaService) {}
 
-  private assertManager(user: JwtPayload) {
+  private assertViewer(user: JwtPayload) {
     const allowed = new Set([
       CampaignRole.CAMPAIGN_DIRECTOR,
       CampaignRole.STATE_COLLATION_OFFICER,
       CampaignRole.LGA_COLLATION_OFFICER,
+      CampaignRole.WARD_RA_OFFICER,
     ]);
     if (!user.role || !allowed.has(user.role as CampaignRole)) {
-      throw new ForbiddenException('You cannot manage ward or PU agents');
+      throw new ForbiddenException('You cannot view agents');
     }
+  }
+
+  /** @deprecated use assertViewer — create/update removed from API */
+  private assertManager(user: JwtPayload) {
+    this.assertViewer(user);
+    if (user.role === CampaignRole.WARD_RA_OFFICER) {
+      throw new ForbiddenException('Ward officers can only view PU agents');
+    }
+  }
+
+  private async assertAgentVisibleToUser(
+    user: JwtPayload,
+    role: ManageableAgentRole,
+    scopeId: string,
+  ) {
+    const wardScopeId = getWardScopeId(user);
+    if (wardScopeId) {
+      if (!this.isPuRole(role)) {
+        throw new ForbiddenException('Ward officers can only view PU agents');
+      }
+      await assertPollingUnitInWard(this.prisma, scopeId, wardScopeId);
+      return;
+    }
+
+    const managedLgaId = await this.requireManagedLgaId(user, undefined, role, scopeId);
+    await this.resolveScopeInLga(role, scopeId, managedLgaId);
   }
 
   private async assertCampaignAccess(userId: string, campaignId: string) {
@@ -238,8 +270,36 @@ export class AgentsService {
   }
 
   async listOptions(user: JwtPayload, campaignId: string, lgaId?: string) {
-    this.assertManager(user);
+    this.assertViewer(user);
     await this.assertCampaignAccess(user.sub, campaignId);
+
+    const wardScopeId = getWardScopeId(user);
+    if (wardScopeId) {
+      const ward = await this.prisma.ward.findUnique({
+        where: { id: wardScopeId },
+        include: {
+          lga: { select: { id: true, name: true } },
+          pollingUnits: {
+            orderBy: { code: 'asc' },
+            select: { id: true, code: true, name: true },
+          },
+        },
+      });
+      if (!ward) throw new NotFoundException('Ward not found');
+      return {
+        lga: ward.lga,
+        ward: { id: ward.id, name: ward.name },
+        wards: [
+          {
+            id: ward.id,
+            name: ward.name,
+            registrationAreaCode: ward.registrationAreaCode,
+            pollingUnits: ward.pollingUnits,
+          },
+        ],
+      };
+    }
+
     const managedLgaId = this.resolveManagedLgaId(user, lgaId);
     if (!managedLgaId) {
       throw new BadRequestException('lgaId is required');
@@ -277,8 +337,64 @@ export class AgentsService {
   }
 
   async list(user: JwtPayload, query: ListAgentsQueryDto) {
-    this.assertManager(user);
+    this.assertViewer(user);
     await this.assertCampaignAccess(user.sub, query.campaignId);
+
+    const wardScopeId = getWardScopeId(user);
+    if (wardScopeId) {
+      if (query.wardId && query.wardId !== wardScopeId) {
+        throw new ForbiddenException('You can only view agents in your assigned ward');
+      }
+
+      const puIds = (
+        await this.prisma.pollingUnit.findMany({
+          where: { wardId: wardScopeId },
+          select: { id: true },
+        })
+      ).map((p) => p.id);
+
+      if (!puIds.length) return [];
+
+      const search = query.search?.trim();
+      const memberships = await this.prisma.campaignMembership.findMany({
+        where: {
+          campaignId: query.campaignId,
+          role: PU_AGENT_ROLE,
+          scopeType: ScopeType.POLLING_UNIT,
+          scopeId: { in: puIds },
+          ...(query.includeInactive ? {} : { isActive: true }),
+          ...(search
+            ? {
+                user: {
+                  OR: [
+                    { firstName: { contains: search, mode: 'insensitive' } },
+                    { lastName: { contains: search, mode: 'insensitive' } },
+                    { phoneNumber: { contains: search, mode: 'insensitive' } },
+                    { email: { contains: search, mode: 'insensitive' } },
+                  ],
+                },
+              }
+            : {}),
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phoneNumber: true,
+              email: true,
+              isActive: true,
+            },
+          },
+        },
+        orderBy: [{ createdAt: 'desc' }],
+        take: 500,
+      });
+
+      return this.enrichMemberships(memberships);
+    }
+
     const managedLgaId = this.resolveManagedLgaId(user, query.lgaId);
     if (!managedLgaId) {
       throw new BadRequestException('lgaId is required');
@@ -363,7 +479,7 @@ export class AgentsService {
   }
 
   async listActivities(user: JwtPayload, membershipId: string) {
-    this.assertManager(user);
+    this.assertViewer(user);
 
     const membership = await this.prisma.campaignMembership.findUnique({
       where: { id: membershipId },
@@ -385,16 +501,10 @@ export class AgentsService {
     await this.assertCampaignAccess(user.sub, membership.campaignId);
     this.assertManageableRole(membership.role as CampaignRole);
 
-    const managedLgaId = await this.requireManagedLgaId(
+    await this.assertAgentVisibleToUser(
       user,
-      undefined,
       membership.role as ManageableAgentRole,
       membership.scopeId!,
-    );
-    await this.resolveScopeInLga(
-      membership.role as ManageableAgentRole,
-      membership.scopeId!,
-      managedLgaId,
     );
 
     const userId = membership.userId;

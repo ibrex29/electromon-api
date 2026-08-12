@@ -4,7 +4,9 @@ import { CreateAgentDto, ListAgentsQueryDto, UpdateAgentDto } from './dto/agents
 export declare class AgentsService {
     private prisma;
     constructor(prisma: PrismaService);
+    private assertViewer;
     private assertManager;
+    private assertAgentVisibleToUser;
     private assertCampaignAccess;
     private resolveManagedLgaId;
     private requireManagedLgaId;
@@ -19,6 +21,10 @@ export declare class AgentsService {
             id: string;
             name: string;
         };
+        ward: {
+            id: string;
+            name: string;
+        };
         wards: {
             id: string;
             name: string;
@@ -29,6 +35,22 @@ export declare class AgentsService {
                 code: string;
             }[];
         }[];
+    } | {
+        lga: {
+            id: string;
+            name: string;
+        };
+        wards: {
+            id: string;
+            name: string;
+            registrationAreaCode: string | null;
+            pollingUnits: {
+                id: string;
+                name: string;
+                code: string;
+            }[];
+        }[];
+        ward?: undefined;
     }>;
     list(user: JwtPayload, query: ListAgentsQueryDto): Promise<{
         membershipId: string;

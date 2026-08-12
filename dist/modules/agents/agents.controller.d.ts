@@ -9,6 +9,10 @@ export declare class AgentsController {
             id: string;
             name: string;
         };
+        ward: {
+            id: string;
+            name: string;
+        };
         wards: {
             id: string;
             name: string;
@@ -19,6 +23,22 @@ export declare class AgentsController {
                 code: string;
             }[];
         }[];
+    } | {
+        lga: {
+            id: string;
+            name: string;
+        };
+        wards: {
+            id: string;
+            name: string;
+            registrationAreaCode: string | null;
+            pollingUnits: {
+                id: string;
+                name: string;
+                code: string;
+            }[];
+        }[];
+        ward?: undefined;
     }>;
     list(user: JwtPayload, query: ListAgentsQueryDto): Promise<{
         membershipId: string;

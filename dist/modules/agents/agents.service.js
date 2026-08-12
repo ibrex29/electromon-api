@@ -55,15 +55,34 @@ let AgentsService = class AgentsService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    assertManager(user) {
+    assertViewer(user) {
         const allowed = new Set([
             shared_1.CampaignRole.CAMPAIGN_DIRECTOR,
             shared_1.CampaignRole.STATE_COLLATION_OFFICER,
             shared_1.CampaignRole.LGA_COLLATION_OFFICER,
+            shared_1.CampaignRole.WARD_RA_OFFICER,
         ]);
         if (!user.role || !allowed.has(user.role)) {
-            throw new common_1.ForbiddenException('You cannot manage ward or PU agents');
+            throw new common_1.ForbiddenException('You cannot view agents');
         }
+    }
+    assertManager(user) {
+        this.assertViewer(user);
+        if (user.role === shared_1.CampaignRole.WARD_RA_OFFICER) {
+            throw new common_1.ForbiddenException('Ward officers can only view PU agents');
+        }
+    }
+    async assertAgentVisibleToUser(user, role, scopeId) {
+        const wardScopeId = (0, campaign_scope_1.getWardScopeId)(user);
+        if (wardScopeId) {
+            if (!this.isPuRole(role)) {
+                throw new common_1.ForbiddenException('Ward officers can only view PU agents');
+            }
+            await (0, campaign_scope_1.assertPollingUnitInWard)(this.prisma, scopeId, wardScopeId);
+            return;
+        }
+        const managedLgaId = await this.requireManagedLgaId(user, undefined, role, scopeId);
+        await this.resolveScopeInLga(role, scopeId, managedLgaId);
     }
     async assertCampaignAccess(userId, campaignId) {
         const membership = await this.prisma.campaignMembership.findFirst({
@@ -215,8 +234,35 @@ let AgentsService = class AgentsService {
         });
     }
     async listOptions(user, campaignId, lgaId) {
-        this.assertManager(user);
+        this.assertViewer(user);
         await this.assertCampaignAccess(user.sub, campaignId);
+        const wardScopeId = (0, campaign_scope_1.getWardScopeId)(user);
+        if (wardScopeId) {
+            const ward = await this.prisma.ward.findUnique({
+                where: { id: wardScopeId },
+                include: {
+                    lga: { select: { id: true, name: true } },
+                    pollingUnits: {
+                        orderBy: { code: 'asc' },
+                        select: { id: true, code: true, name: true },
+                    },
+                },
+            });
+            if (!ward)
+                throw new common_1.NotFoundException('Ward not found');
+            return {
+                lga: ward.lga,
+                ward: { id: ward.id, name: ward.name },
+                wards: [
+                    {
+                        id: ward.id,
+                        name: ward.name,
+                        registrationAreaCode: ward.registrationAreaCode,
+                        pollingUnits: ward.pollingUnits,
+                    },
+                ],
+            };
+        }
         const managedLgaId = this.resolveManagedLgaId(user, lgaId);
         if (!managedLgaId) {
             throw new common_1.BadRequestException('lgaId is required');
@@ -251,8 +297,57 @@ let AgentsService = class AgentsService {
         };
     }
     async list(user, query) {
-        this.assertManager(user);
+        this.assertViewer(user);
         await this.assertCampaignAccess(user.sub, query.campaignId);
+        const wardScopeId = (0, campaign_scope_1.getWardScopeId)(user);
+        if (wardScopeId) {
+            if (query.wardId && query.wardId !== wardScopeId) {
+                throw new common_1.ForbiddenException('You can only view agents in your assigned ward');
+            }
+            const puIds = (await this.prisma.pollingUnit.findMany({
+                where: { wardId: wardScopeId },
+                select: { id: true },
+            })).map((p) => p.id);
+            if (!puIds.length)
+                return [];
+            const search = query.search?.trim();
+            const memberships = await this.prisma.campaignMembership.findMany({
+                where: {
+                    campaignId: query.campaignId,
+                    role: agents_dto_1.PU_AGENT_ROLE,
+                    scopeType: shared_1.ScopeType.POLLING_UNIT,
+                    scopeId: { in: puIds },
+                    ...(query.includeInactive ? {} : { isActive: true }),
+                    ...(search
+                        ? {
+                            user: {
+                                OR: [
+                                    { firstName: { contains: search, mode: 'insensitive' } },
+                                    { lastName: { contains: search, mode: 'insensitive' } },
+                                    { phoneNumber: { contains: search, mode: 'insensitive' } },
+                                    { email: { contains: search, mode: 'insensitive' } },
+                                ],
+                            },
+                        }
+                        : {}),
+                },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            phoneNumber: true,
+                            email: true,
+                            isActive: true,
+                        },
+                    },
+                },
+                orderBy: [{ createdAt: 'desc' }],
+                take: 500,
+            });
+            return this.enrichMemberships(memberships);
+        }
         const managedLgaId = this.resolveManagedLgaId(user, query.lgaId);
         if (!managedLgaId) {
             throw new common_1.BadRequestException('lgaId is required');
@@ -324,7 +419,7 @@ let AgentsService = class AgentsService {
         return this.enrichMemberships(memberships);
     }
     async listActivities(user, membershipId) {
-        this.assertManager(user);
+        this.assertViewer(user);
         const membership = await this.prisma.campaignMembership.findUnique({
             where: { id: membershipId },
             include: {
@@ -344,8 +439,7 @@ let AgentsService = class AgentsService {
             throw new common_1.NotFoundException('Agent not found');
         await this.assertCampaignAccess(user.sub, membership.campaignId);
         this.assertManageableRole(membership.role);
-        const managedLgaId = await this.requireManagedLgaId(user, undefined, membership.role, membership.scopeId);
-        await this.resolveScopeInLga(membership.role, membership.scopeId, managedLgaId);
+        await this.assertAgentVisibleToUser(user, membership.role, membership.scopeId);
         const userId = membership.userId;
         const campaignId = membership.campaignId;
         const [collationLogs, reportedIncidents, handledIncidents] = await Promise.all([
