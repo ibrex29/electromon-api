@@ -57,9 +57,6 @@ services:
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     restart: unless-stopped
-    command: >
-      sh -c "rabbitmq-plugins enable --offline rabbitmq_prometheus &&
-             docker-entrypoint.sh rabbitmq-server"
     env_file:
       - .env
     environment:
@@ -68,10 +65,10 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      interval: 15s
+      timeout: 30s
+      retries: 10
+      start_period: 90s
     logging: *default-logging
 
   minio:
@@ -132,16 +129,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
       minio:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
     expose:
-      - "3002"
+      - "3001"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3002/api/v1/health/ready"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/v1/health/ready"]
       interval: 30s
       timeout: 10s
       retries: 3
