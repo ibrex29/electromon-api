@@ -1,20 +1,21 @@
 # syntax=docker/dockerfile:1
 
 # Electromon Migrate — one-shot migration container (build context: api project root)
+# Does not compile bcrypt (seed-only devDependency). Production sets RUN_SEED=false.
 
-FROM node:20-alpine AS base
+FROM node:20-alpine
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
-RUN apk add --no-cache libc6-compat netcat-openbsd
+RUN apk add --no-cache libc6-compat netcat-openbsd openssl
 
 WORKDIR /app
 
-COPY db/package.json db/prisma.config.ts db/tsconfig.json ./
+COPY db/package.json db/pnpm-lock.yaml db/prisma.config.ts db/tsconfig.json ./
 COPY db/prisma ./prisma/
-COPY db/src ./src/
 
-RUN pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+# Skip lifecycle scripts: bcrypt's node-gyp build needs Python and is unused here.
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 RUN npx prisma generate
 
