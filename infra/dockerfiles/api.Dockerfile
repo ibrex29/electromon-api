@@ -22,8 +22,12 @@ RUN pnpm install --frozen-lockfile
 FROM base AS builder
 WORKDIR /app
 
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Root install does not put prisma on PATH; db/shared have their own node_modules
+# (postinstall: pnpm --dir db install && pnpm --dir shared install).
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/db/node_modules ./db/node_modules
+COPY --from=deps /app/shared/node_modules ./shared/node_modules
 
 # Prisma 7 requires DATABASE_URL while generating the client (build does not connect).
 ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public"
