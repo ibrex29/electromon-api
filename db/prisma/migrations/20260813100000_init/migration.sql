@@ -1,8 +1,20 @@
--- CreateEnum
-CREATE TYPE "CampaignRole" AS ENUM ('CANDIDATE', 'CAMPAIGN_DIRECTOR', 'STATE_COORDINATOR', 'LGA_COORDINATOR', 'WARD_COORDINATOR', 'SUPPORT_GROUP_LEADER', 'VOLUNTEER_COORDINATOR', 'POLLING_AGENT_COORDINATOR', 'DATA_ANALYST', 'MEDIA_TEAM', 'POLLING_AGENT', 'VOLUNTEER');
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
 
 -- CreateEnum
-CREATE TYPE "ScopeType" AS ENUM ('CAMPAIGN', 'STATE', 'SENATORIAL_DISTRICT', 'LGA', 'WARD', 'POLLING_UNIT');
+CREATE TYPE "CampaignRole" AS ENUM ('CANDIDATE', 'CAMPAIGN_DIRECTOR', 'STATE_COORDINATOR', 'LGA_COORDINATOR', 'WARD_COORDINATOR', 'SUPPORT_GROUP_LEADER', 'VOLUNTEER_COORDINATOR', 'POLLING_AGENT_COORDINATOR', 'DATA_ANALYST', 'MEDIA_TEAM', 'POLLING_AGENT', 'VOLUNTEER', 'POLLING_UNIT_OFFICER', 'WARD_RA_OFFICER', 'LGA_COLLATION_OFFICER', 'STATE_COLLATION_OFFICER', 'NATIONAL_COLLATION_OFFICER');
+
+-- CreateEnum
+CREATE TYPE "ScopeType" AS ENUM ('CAMPAIGN', 'STATE', 'SENATORIAL_DISTRICT', 'LGA', 'WARD', 'POLLING_UNIT', 'NATIONAL');
+
+-- CreateEnum
+CREATE TYPE "CollationLevel" AS ENUM ('POLLING_UNIT', 'WARD', 'LGA', 'STATE', 'NATIONAL');
+
+-- CreateEnum
+CREATE TYPE "CollationResultStatus" AS ENUM ('DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED');
+
+-- CreateEnum
+CREATE TYPE "CollationActionType" AS ENUM ('SUBMITTED', 'APPROVED', 'REJECTED');
 
 -- CreateEnum
 CREATE TYPE "SupportGroupCategory" AS ENUM ('YOUTH', 'WOMEN', 'FARMERS', 'PROFESSIONALS', 'STUDENTS', 'RELIGIOUS', 'COMMUNITY');
@@ -11,7 +23,16 @@ CREATE TYPE "SupportGroupCategory" AS ENUM ('YOUTH', 'WOMEN', 'FARMERS', 'PROFES
 CREATE TYPE "VerificationStatus" AS ENUM ('PENDING', 'VERIFIED', 'ACTIVE', 'REJECTED');
 
 -- CreateEnum
-CREATE TYPE "FieldReportType" AS ENUM ('SECURITY_CONCERN', 'COMMUNITY_REQUEST', 'OPPOSITION_ACTIVITY', 'CAMPAIGN_PROGRESS', 'DAILY_SITREP');
+CREATE TYPE "FieldReportType" AS ENUM ('SECURITY_CONCERN', 'COMMUNITY_REQUEST', 'OPPOSITION_ACTIVITY', 'CAMPAIGN_PROGRESS', 'DAILY_SITREP', 'INCIDENT');
+
+-- CreateEnum
+CREATE TYPE "IncidentType" AS ENUM ('VOTER_INTIMIDATION', 'BALLOT_SNATCHING', 'BALLOT_STUFFING', 'VOTE_BUYING', 'VIOLENCE_THUGGERY', 'MATERIALS_SHORTAGE', 'LATE_OR_FAILED_OPENING', 'BVAS_MALFUNCTION', 'UNAUTHORIZED_PERSONNEL', 'OVERVOTING', 'OPPOSITION_DISRUPTION', 'OTHERS');
+
+-- CreateEnum
+CREATE TYPE "IncidentSeverity" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL');
+
+-- CreateEnum
+CREATE TYPE "FieldReportStatus" AS ENUM ('OPEN', 'ESCALATED', 'RESOLVED');
 
 -- CreateEnum
 CREATE TYPE "PollingUnitStrength" AS ENUM ('STRONG', 'SWING', 'WEAK');
@@ -79,6 +100,8 @@ CREATE TABLE "campaigns" (
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "stateId" TEXT NOT NULL,
+    "clientPartyCode" TEXT,
+    "trackedParties" JSONB,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -155,6 +178,7 @@ CREATE TABLE "lgas" (
 CREATE TABLE "wards" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
+    "registrationAreaCode" TEXT,
     "lgaId" TEXT NOT NULL,
     "latitude" DOUBLE PRECISION,
     "longitude" DOUBLE PRECISION,
@@ -286,6 +310,8 @@ CREATE TABLE "field_reports" (
     "campaignId" TEXT NOT NULL,
     "reportedById" TEXT NOT NULL,
     "type" "FieldReportType" NOT NULL,
+    "incidentType" "IncidentType",
+    "incidentSeverity" "IncidentSeverity",
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "wardId" TEXT,
@@ -294,7 +320,12 @@ CREATE TABLE "field_reports" (
     "longitude" DOUBLE PRECISION,
     "photoUrls" TEXT[],
     "isUrgent" BOOLEAN NOT NULL DEFAULT false,
+    "status" "FieldReportStatus" NOT NULL DEFAULT 'OPEN',
+    "wardComment" TEXT,
+    "handledById" TEXT,
+    "handledAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "field_reports_pkey" PRIMARY KEY ("id")
 );
@@ -312,6 +343,49 @@ CREATE TABLE "situation_updates" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "situation_updates_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "collation_results" (
+    "id" TEXT NOT NULL,
+    "campaignId" TEXT NOT NULL,
+    "level" "CollationLevel" NOT NULL,
+    "scopeType" "ScopeType" NOT NULL,
+    "scopeId" TEXT NOT NULL,
+    "registeredVoters" INTEGER,
+    "accreditedVoters" INTEGER,
+    "votesCast" INTEGER,
+    "partyResults" JSONB,
+    "ec8aPhotoUrls" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "approvalComment" TEXT,
+    "status" "CollationResultStatus" NOT NULL DEFAULT 'DRAFT',
+    "submittedById" TEXT,
+    "submittedAt" TIMESTAMP(3),
+    "approvedById" TEXT,
+    "approvedAt" TIMESTAMP(3),
+    "rejectionReason" TEXT,
+    "flaggedPollingUnitIds" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "parentResultId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "collation_results_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "collation_action_logs" (
+    "id" TEXT NOT NULL,
+    "campaignId" TEXT NOT NULL,
+    "collationResultId" TEXT NOT NULL,
+    "action" "CollationActionType" NOT NULL,
+    "actorId" TEXT NOT NULL,
+    "fromStatus" "CollationResultStatus",
+    "toStatus" "CollationResultStatus" NOT NULL,
+    "comment" TEXT,
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "collation_action_logs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -444,6 +518,18 @@ CREATE INDEX "field_reports_campaignId_idx" ON "field_reports"("campaignId");
 CREATE INDEX "field_reports_type_idx" ON "field_reports"("type");
 
 -- CreateIndex
+CREATE INDEX "field_reports_incidentType_idx" ON "field_reports"("incidentType");
+
+-- CreateIndex
+CREATE INDEX "field_reports_incidentSeverity_idx" ON "field_reports"("incidentSeverity");
+
+-- CreateIndex
+CREATE INDEX "field_reports_status_idx" ON "field_reports"("status");
+
+-- CreateIndex
+CREATE INDEX "field_reports_wardId_idx" ON "field_reports"("wardId");
+
+-- CreateIndex
 CREATE INDEX "field_reports_createdAt_idx" ON "field_reports"("createdAt");
 
 -- CreateIndex
@@ -454,6 +540,27 @@ CREATE INDEX "situation_updates_status_idx" ON "situation_updates"("status");
 
 -- CreateIndex
 CREATE INDEX "situation_updates_createdAt_idx" ON "situation_updates"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "collation_results_campaignId_level_status_idx" ON "collation_results"("campaignId", "level", "status");
+
+-- CreateIndex
+CREATE INDEX "collation_results_scopeType_scopeId_idx" ON "collation_results"("scopeType", "scopeId");
+
+-- CreateIndex
+CREATE INDEX "collation_results_parentResultId_idx" ON "collation_results"("parentResultId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "collation_results_campaignId_level_scopeType_scopeId_key" ON "collation_results"("campaignId", "level", "scopeType", "scopeId");
+
+-- CreateIndex
+CREATE INDEX "collation_action_logs_collationResultId_createdAt_idx" ON "collation_action_logs"("collationResultId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "collation_action_logs_campaignId_createdAt_idx" ON "collation_action_logs"("campaignId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "collation_action_logs_actorId_idx" ON "collation_action_logs"("actorId");
 
 -- AddForeignKey
 ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -522,6 +629,9 @@ ALTER TABLE "field_reports" ADD CONSTRAINT "field_reports_campaignId_fkey" FOREI
 ALTER TABLE "field_reports" ADD CONSTRAINT "field_reports_reportedById_fkey" FOREIGN KEY ("reportedById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "field_reports" ADD CONSTRAINT "field_reports_handledById_fkey" FOREIGN KEY ("handledById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "field_reports" ADD CONSTRAINT "field_reports_wardId_fkey" FOREIGN KEY ("wardId") REFERENCES "wards"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -532,3 +642,24 @@ ALTER TABLE "situation_updates" ADD CONSTRAINT "situation_updates_pollingUnitId_
 
 -- AddForeignKey
 ALTER TABLE "situation_updates" ADD CONSTRAINT "situation_updates_reportedById_fkey" FOREIGN KEY ("reportedById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "collation_results" ADD CONSTRAINT "collation_results_campaignId_fkey" FOREIGN KEY ("campaignId") REFERENCES "campaigns"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "collation_results" ADD CONSTRAINT "collation_results_submittedById_fkey" FOREIGN KEY ("submittedById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "collation_results" ADD CONSTRAINT "collation_results_approvedById_fkey" FOREIGN KEY ("approvedById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "collation_results" ADD CONSTRAINT "collation_results_parentResultId_fkey" FOREIGN KEY ("parentResultId") REFERENCES "collation_results"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "collation_action_logs" ADD CONSTRAINT "collation_action_logs_campaignId_fkey" FOREIGN KEY ("campaignId") REFERENCES "campaigns"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "collation_action_logs" ADD CONSTRAINT "collation_action_logs_collationResultId_fkey" FOREIGN KEY ("collationResultId") REFERENCES "collation_results"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "collation_action_logs" ADD CONSTRAINT "collation_action_logs_actorId_fkey" FOREIGN KEY ("actorId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

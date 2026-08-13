@@ -24,7 +24,8 @@ services:
   migrate:
     profiles: ["apps"]
     build:
-      context: ../..
+      # Paths are relative to --project-directory (repo root), not this file.
+      context: .
       dockerfile: infra/dockerfiles/migrate.Dockerfile
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-electromon}:${POSTGRES_PASSWORD:-electromon}@postgres:5432/${POSTGRES_DB:-electromon}?schema=public
@@ -39,7 +40,7 @@ services:
   api:
     profiles: ["apps"]
     build:
-      context: ../..
+      context: .
       dockerfile: infra/dockerfiles/api.Dockerfile
     environment:
       <<: *api-env

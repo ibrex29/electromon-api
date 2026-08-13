@@ -16,9 +16,9 @@ services:
       METRICS_TOKEN: ${METRICS_TOKEN:-}
       METRICS_TOKEN_FILE: /etc/prometheus/metrics_token
     volumes:
-      - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ../observability/prometheus/alerts:/etc/prometheus/alerts:ro
-      - ../scripts/entrypoint-prometheus.sh:/entrypoint.sh:ro
+      - ./infra/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/observability/prometheus/alerts:/etc/prometheus/alerts:ro
+      - ./infra/scripts/entrypoint-prometheus.sh:/entrypoint.sh:ro
       - prometheus_data:/prometheus
     networks:
       - electromon
@@ -42,7 +42,7 @@ services:
       ALERT_SLACK_WEBHOOK_URL: ${ALERT_SLACK_WEBHOOK_URL:-}
       ALERT_SLACK_CHANNEL: ${ALERT_SLACK_CHANNEL:-#electromon-alerts}
     volumes:
-      - ../scripts/entrypoint-alertmanager.sh:/entrypoint.sh:ro
+      - ./infra/scripts/entrypoint-alertmanager.sh:/entrypoint.sh:ro
       - alertmanager_data:/alertmanager
     networks:
       - electromon
@@ -54,7 +54,7 @@ services:
     restart: unless-stopped
     command: -config.file=/etc/loki/loki.yml
     volumes:
-      - ../observability/loki/loki.yml:/etc/loki/loki.yml:ro
+      - ./infra/observability/loki/loki.yml:/etc/loki/loki.yml:ro
       - loki_data:/loki
     networks:
       - electromon
@@ -66,7 +66,7 @@ services:
     restart: unless-stopped
     command: -config.file=/etc/promtail/promtail.yml
     volumes:
-      - ../observability/promtail/promtail.yml:/etc/promtail/promtail.yml:ro
+      - ./infra/observability/promtail/promtail.yml:/etc/promtail/promtail.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     depends_on:
@@ -86,8 +86,8 @@ services:
       GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3030}
       GF_AUTH_ANONYMOUS_ENABLED: "false"
     volumes:
-      - ../observability/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ../observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana_data:/var/lib/grafana
     networks:
       - electromon

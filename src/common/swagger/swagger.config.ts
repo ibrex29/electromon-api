@@ -21,9 +21,10 @@ export function buildSwaggerDocument() {
     .setVersion('0.1.0')
     .setContact('Dan-Modi Campaign', '', 'support@electromon.ng')
     .addServer('http://localhost:3001', 'Local development')
+    .addServer('https://api.electromon.iexportcalc.com', 'Production')
     .addServer(
       'https://electromon-backend-4cnjmz-595e23-161-97-113-136.traefik.me',
-      'Production',
+      'Dokploy (Traefik)',
     )
     .addBearerAuth(
       {

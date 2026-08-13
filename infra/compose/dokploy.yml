@@ -32,7 +32,7 @@ services:
       POSTGRES_DB: electromon
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ../scripts/init-postgres.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
+      - ./infra/scripts/init-postgres.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U electromon -d electromon"]
       interval: 10s
@@ -97,12 +97,12 @@ services:
     entrypoint: /bin/sh
     command: /scripts/init-minio.sh
     volumes:
-      - ../scripts/init-minio.sh:/scripts/init-minio.sh:ro
+      - ./infra/scripts/init-minio.sh:/scripts/init-minio.sh:ro
     restart: "no"
 
   migrate:
     build:
-      context: ../..
+      context: .
       dockerfile: infra/dockerfiles/migrate.Dockerfile
     env_file:
       - .env
@@ -116,7 +116,7 @@ services:
 
   api:
     build:
-      context: ../..
+      context: .
       dockerfile: infra/dockerfiles/api.Dockerfile
     env_file:
       - .env
