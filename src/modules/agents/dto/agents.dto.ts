@@ -11,11 +11,12 @@ import {
   MinLength,
 } from 'class-validator';
 
-/** Single role per level for agents LGA can create */
+/** Roles system admin can create/update via agent management */
+export const LGA_AGENT_ROLE = CampaignRole.LGA_COLLATION_OFFICER;
 export const WARD_AGENT_ROLE = CampaignRole.WARD_RA_OFFICER;
 export const PU_AGENT_ROLE = CampaignRole.POLLING_AGENT;
 
-export const MANAGEABLE_AGENT_ROLES = [WARD_AGENT_ROLE, PU_AGENT_ROLE] as const;
+export const MANAGEABLE_AGENT_ROLES = [LGA_AGENT_ROLE, WARD_AGENT_ROLE, PU_AGENT_ROLE] as const;
 
 export type ManageableAgentRole = (typeof MANAGEABLE_AGENT_ROLES)[number];
 
@@ -25,10 +26,10 @@ export class ListAgentsQueryDto {
   @IsNotEmpty()
   campaignId: string;
 
-  @ApiPropertyOptional({ enum: ['ward', 'pu', 'all'], default: 'all' })
+  @ApiPropertyOptional({ enum: ['lga', 'ward', 'pu', 'all'], default: 'all' })
   @IsOptional()
   @IsString()
-  kind?: 'ward' | 'pu' | 'all';
+  kind?: 'lga' | 'ward' | 'pu' | 'all';
 
   @ApiPropertyOptional({ description: 'Override LGA (director/state only; LGA users locked to scope)' })
   @IsOptional()
@@ -62,7 +63,9 @@ export class CreateAgentDto {
   @IsEnum(CampaignRole)
   role: ManageableAgentRole;
 
-  @ApiProperty({ description: 'Ward id (ward agent) or polling unit id (PU agent)' })
+  @ApiProperty({
+    description: 'LGA id (LGA officer), ward id (ward officer), or polling unit id (PU agent)',
+  })
   @IsString()
   @IsNotEmpty()
   scopeId: string;
@@ -121,7 +124,7 @@ export class UpdateAgentDto {
   @IsEnum(CampaignRole)
   role?: ManageableAgentRole;
 
-  @ApiPropertyOptional({ description: 'Ward or polling unit id matching the role' })
+  @ApiPropertyOptional({ description: 'LGA, ward, or polling unit id matching the role' })
   @IsOptional()
   @IsString()
   scopeId?: string;

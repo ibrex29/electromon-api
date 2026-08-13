@@ -52,7 +52,9 @@ ENV NODE_PATH=/app/db/node_modules:/app/node_modules
 ENV API_PORT=3002
 
 COPY --chown=nestjs:nodejs infra/scripts/entrypoint-api.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+  && mkdir -p /app/uploads \
+  && chown nestjs:nodejs /app/uploads
 
 USER nestjs
 

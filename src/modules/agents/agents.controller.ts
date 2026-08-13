@@ -44,7 +44,7 @@ export class AgentsController {
   @Get()
   @Roles(...AGENT_VIEW_ROLES)
   @ApiOperation({
-    summary: 'List agents (admin/LGA: ward+PU; ward officer: PU agents in assigned ward)',
+    summary: 'List agents (admin: LGA/ward/PU; LGA: ward+PU; ward officer: PU agents)',
   })
   @ApiOkResponse({ type: [AgentResponseDto] })
   list(@CurrentUser() user: JwtPayload, @Query() query: ListAgentsQueryDto) {
@@ -63,7 +63,7 @@ export class AgentsController {
 
   @Post()
   @Roles(...AGENT_MANAGE_ROLES)
-  @ApiOperation({ summary: 'Create or assign a ward officer / PU agent (system admin)' })
+  @ApiOperation({ summary: 'Create or assign an LGA / ward / PU agent (system admin)' })
   @ApiOkResponse({ type: AgentResponseDto })
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreateAgentDto) {
     return this.agentsService.create(user, dto);
@@ -71,7 +71,7 @@ export class AgentsController {
 
   @Patch(':membershipId')
   @Roles(...AGENT_MANAGE_ROLES)
-  @ApiOperation({ summary: 'Update a ward officer / PU agent (system admin)' })
+  @ApiOperation({ summary: 'Update an LGA / ward / PU agent (system admin)' })
   @ApiOkResponse({ type: AgentResponseDto })
   update(
     @CurrentUser() user: JwtPayload,

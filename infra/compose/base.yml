@@ -121,3 +121,4 @@ volumes:
   redis_data:
   rabbitmq_data:
   minio_data:
+  api_uploads:

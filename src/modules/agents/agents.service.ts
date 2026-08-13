@@ -18,6 +18,7 @@ import {
 import { normalizePhoneNumber, phoneLookupCandidates } from '../auth/phone.util';
 import {
   CreateAgentDto,
+  LGA_AGENT_ROLE,
   ListAgentsQueryDto,
   MANAGEABLE_AGENT_ROLES,
   ManageableAgentRole,
@@ -101,6 +102,15 @@ export class AgentsService {
     const fromUser = this.resolveManagedLgaId(user, requestedLgaId);
     if (fromUser) return fromUser;
 
+    if (this.isLgaRole(role)) {
+      const lga = await this.prisma.lGA.findUnique({
+        where: { id: scopeId },
+        select: { id: true },
+      });
+      if (!lga) throw new BadRequestException('LGA not found');
+      return lga.id;
+    }
+
     if (this.isWardRole(role)) {
       const ward = await this.prisma.ward.findUnique({
         where: { id: scopeId },
@@ -118,6 +128,10 @@ export class AgentsService {
     return pu.ward.lgaId;
   }
 
+  private isLgaRole(role: CampaignRole): boolean {
+    return role === LGA_AGENT_ROLE;
+  }
+
   private isWardRole(role: CampaignRole): boolean {
     return role === WARD_AGENT_ROLE;
   }
@@ -133,6 +147,26 @@ export class AgentsService {
   }
 
   private async resolveScopeInLga(role: ManageableAgentRole, scopeId: string, lgaId: string) {
+    if (this.isLgaRole(role)) {
+      if (scopeId !== lgaId) {
+        throw new BadRequestException('LGA officer scope must match the selected LGA');
+      }
+      const lga = await this.prisma.lGA.findUnique({
+        where: { id: lgaId },
+        select: { id: true, name: true },
+      });
+      if (!lga) {
+        throw new BadRequestException('LGA not found');
+      }
+      return {
+        scopeType: ScopeType.LGA as const,
+        scopeId: lga.id,
+        scopeName: lga.name,
+        wardName: null as string | null,
+        lgaName: lga.name,
+      };
+    }
+
     if (this.isWardRole(role)) {
       const ward = await this.prisma.ward.findFirst({
         where: { id: scopeId, lgaId },
@@ -230,8 +264,11 @@ export class AgentsService {
     const puIds = memberships
       .filter((m) => m.scopeType === ScopeType.POLLING_UNIT && m.scopeId)
       .map((m) => m.scopeId as string);
+    const lgaIds = memberships
+      .filter((m) => m.scopeType === ScopeType.LGA && m.scopeId)
+      .map((m) => m.scopeId as string);
 
-    const [wards, units] = await Promise.all([
+    const [wards, units, lgas] = await Promise.all([
       wardIds.length
         ? this.prisma.ward.findMany({
             where: { id: { in: wardIds } },
@@ -244,12 +281,27 @@ export class AgentsService {
             include: { ward: { include: { lga: { select: { name: true } } } } },
           })
         : Promise.resolve([]),
+      lgaIds.length
+        ? this.prisma.lGA.findMany({
+            where: { id: { in: lgaIds } },
+            select: { id: true, name: true },
+          })
+        : Promise.resolve([]),
     ]);
 
     const wardMap = new Map(wards.map((w) => [w.id, w]));
     const puMap = new Map(units.map((u) => [u.id, u]));
+    const lgaMap = new Map(lgas.map((l) => [l.id, l]));
 
     return memberships.map((m) => {
+      if (m.scopeType === ScopeType.LGA && m.scopeId) {
+        const lga = lgaMap.get(m.scopeId);
+        return this.mapAgent(m, {
+          scopeName: lga?.name ?? m.scopeId,
+          wardName: null,
+          lgaName: lga?.name,
+        });
+      }
       if (m.scopeType === ScopeType.WARD && m.scopeId) {
         const ward = wardMap.get(m.scopeId);
         return this.mapAgent(m, {
@@ -303,7 +355,11 @@ export class AgentsService {
 
     const managedLgaId = this.resolveManagedLgaId(user, lgaId);
     if (!managedLgaId) {
-      throw new BadRequestException('lgaId is required');
+      // Director/state: no LGA filter — options used for create form are loaded per-LGA
+      return {
+        lga: { id: '', name: 'All LGAs' },
+        wards: [],
+      };
     }
 
     const lga = await this.prisma.lGA.findUnique({
@@ -397,17 +453,87 @@ export class AgentsService {
     }
 
     const managedLgaId = this.resolveManagedLgaId(user, query.lgaId);
-    if (!managedLgaId) {
-      throw new BadRequestException('lgaId is required');
-    }
-
     const kind = query.kind ?? 'all';
     const roleFilter =
-      kind === 'ward'
-        ? [WARD_AGENT_ROLE]
-        : kind === 'pu'
-          ? [PU_AGENT_ROLE]
-          : [...MANAGEABLE_AGENT_ROLES];
+      kind === 'lga'
+        ? [LGA_AGENT_ROLE]
+        : kind === 'ward'
+          ? [WARD_AGENT_ROLE]
+          : kind === 'pu'
+            ? [PU_AGENT_ROLE]
+            : [...MANAGEABLE_AGENT_ROLES];
+
+    // No LGA filter (director/state): list all campaign LGA/ward/PU agents
+    if (!managedLgaId) {
+      const scopeOr: Prisma.CampaignMembershipWhereInput[] = [];
+      if (kind === 'lga' || kind === 'all') {
+        scopeOr.push({ scopeType: ScopeType.LGA });
+      }
+      if (kind === 'ward' || kind === 'all') {
+        scopeOr.push({
+          scopeType: ScopeType.WARD,
+          ...(query.wardId ? { scopeId: query.wardId } : {}),
+        });
+      }
+      if (kind === 'pu' || kind === 'all') {
+        if (query.wardId) {
+          const statewidePuIds = (
+            await this.prisma.pollingUnit.findMany({
+              where: { wardId: query.wardId },
+              select: { id: true },
+            })
+          ).map((p) => p.id);
+          if (statewidePuIds.length) {
+            scopeOr.push({
+              scopeType: ScopeType.POLLING_UNIT,
+              scopeId: { in: statewidePuIds },
+            });
+          }
+        } else {
+          scopeOr.push({ scopeType: ScopeType.POLLING_UNIT });
+        }
+      }
+
+      if (!scopeOr.length) return [];
+
+      const searchAll = query.search?.trim();
+      const allMemberships = await this.prisma.campaignMembership.findMany({
+        where: {
+          campaignId: query.campaignId,
+          role: { in: roleFilter },
+          OR: scopeOr,
+          ...(query.includeInactive ? {} : { isActive: true }),
+          ...(searchAll
+            ? {
+                user: {
+                  OR: [
+                    { firstName: { contains: searchAll, mode: 'insensitive' } },
+                    { lastName: { contains: searchAll, mode: 'insensitive' } },
+                    { phoneNumber: { contains: searchAll, mode: 'insensitive' } },
+                    { email: { contains: searchAll, mode: 'insensitive' } },
+                  ],
+                },
+              }
+            : {}),
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phoneNumber: true,
+              email: true,
+              isActive: true,
+            },
+          },
+        },
+        orderBy: [{ role: 'asc' }, { createdAt: 'desc' }],
+        take: 500,
+      });
+
+      return this.enrichMemberships(allMemberships);
+    }
 
     const wardIds = (
       await this.prisma.ward.findMany({
@@ -429,10 +555,13 @@ export class AgentsService {
     ).map((p) => p.id);
 
     const scopeOr: Prisma.CampaignMembershipWhereInput[] = [];
-    if (kind !== 'pu' && wardIds.length) {
+    if ((kind === 'lga' || kind === 'all') && !query.wardId) {
+      scopeOr.push({ scopeType: ScopeType.LGA, scopeId: managedLgaId });
+    }
+    if ((kind === 'ward' || kind === 'all') && wardIds.length) {
       scopeOr.push({ scopeType: ScopeType.WARD, scopeId: { in: wardIds } });
     }
-    if (kind !== 'ward' && puIds.length) {
+    if ((kind === 'pu' || kind === 'all') && puIds.length) {
       scopeOr.push({ scopeType: ScopeType.POLLING_UNIT, scopeId: { in: puIds } });
     }
 
