@@ -19,8 +19,20 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1');
 
+  const corsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:3000')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000',
+    origin: (origin, callback) => {
+      // Reflect a single allowed origin (browsers reject comma-joined ACAO values).
+      if (!origin || corsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`Origin ${origin} not allowed by CORS`), false);
+    },
     credentials: true,
     exposedHeaders: ['X-Request-Id'],
   });
