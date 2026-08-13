@@ -112,6 +112,7 @@ services:
       postgres:
         condition: service_healthy
     restart: "no"
+    
 
   api:
     build:
