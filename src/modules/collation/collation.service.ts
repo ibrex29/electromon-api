@@ -225,6 +225,7 @@ export class CollationService {
       registeredVoters: result?.registeredVoters ?? null,
       accreditedVoters: result?.accreditedVoters ?? null,
       votesCast: result?.votesCast ?? null,
+      invalidVotes: result?.invalidVotes ?? null,
       partyResults: result?.partyResults ?? null,
       rejectionReason: result?.rejectionReason ?? null,
       submittedAt: result?.submittedAt ?? null,
@@ -455,6 +456,7 @@ export class CollationService {
         registeredVoters: null,
         accreditedVoters: null,
         votesCast: null,
+        invalidVotes: null,
         partyResults: null,
         ec8aPhotoUrls: [] as string[],
         approvalComment: null,
@@ -804,6 +806,7 @@ export class CollationService {
         registeredVoters: dto.registeredVoters,
         accreditedVoters: dto.accreditedVoters,
         votesCast: dto.votesCast,
+        invalidVotes: dto.invalidVotes,
         partyResults: dto.partyResults,
         ec8aPhotoUrls,
         status: CollationResultStatus.DRAFT,
@@ -812,6 +815,7 @@ export class CollationService {
         registeredVoters: dto.registeredVoters,
         accreditedVoters: dto.accreditedVoters,
         votesCast: dto.votesCast,
+        invalidVotes: dto.invalidVotes,
         partyResults: dto.partyResults,
         ec8aPhotoUrls,
         status: CollationResultStatus.DRAFT,
@@ -1241,8 +1245,9 @@ export class CollationService {
         registeredVoters: (acc.registeredVoters ?? 0) + (r.registeredVoters ?? 0),
         accreditedVoters: (acc.accreditedVoters ?? 0) + (r.accreditedVoters ?? 0),
         votesCast: (acc.votesCast ?? 0) + (r.votesCast ?? 0),
+        invalidVotes: (acc.invalidVotes ?? 0) + (r.invalidVotes ?? 0),
       }),
-      { registeredVoters: 0, accreditedVoters: 0, votesCast: 0 },
+      { registeredVoters: 0, accreditedVoters: 0, votesCast: 0, invalidVotes: 0 },
     );
     const partyResults = this.aggregatePartyResults(approvedChildren);
 
@@ -1598,8 +1603,9 @@ export class CollationService {
         registeredVoters: (acc.registeredVoters ?? 0) + (r.registeredVoters ?? 0),
         accreditedVoters: (acc.accreditedVoters ?? 0) + (r.accreditedVoters ?? 0),
         votesCast: (acc.votesCast ?? 0) + (r.votesCast ?? 0),
+        invalidVotes: (acc.invalidVotes ?? 0) + (r.invalidVotes ?? 0),
       }),
-      { registeredVoters: 0, accreditedVoters: 0, votesCast: 0 },
+      { registeredVoters: 0, accreditedVoters: 0, votesCast: 0, invalidVotes: 0 },
     );
 
     const partyResults = this.aggregatePartyResults(approvedChildren);

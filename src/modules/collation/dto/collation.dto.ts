@@ -20,6 +20,12 @@ export class CreateCollationResultDto {
   @Min(0)
   votesCast?: number;
 
+  @ApiPropertyOptional({ example: 12, description: 'Rejected / invalid ballot papers' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  invalidVotes?: number;
+
   @ApiPropertyOptional({
     example: { APC: 320, PDP: 210, NNPP: 85 },
     description: 'Party vote totals keyed by party code',

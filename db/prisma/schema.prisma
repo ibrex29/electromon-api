@@ -573,6 +573,7 @@ model CollationResult {
   registeredVoters Int?
   accreditedVoters Int?
   votesCast        Int?
+  invalidVotes     Int?
   partyResults     Json?
   ec8aPhotoUrls    String[]              @default([])
   approvalComment  String?

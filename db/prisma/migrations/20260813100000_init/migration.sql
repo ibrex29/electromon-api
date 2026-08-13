@@ -355,6 +355,7 @@ CREATE TABLE "collation_results" (
     "registeredVoters" INTEGER,
     "accreditedVoters" INTEGER,
     "votesCast" INTEGER,
+    "invalidVotes" INTEGER,
     "partyResults" JSONB,
     "ec8aPhotoUrls" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "approvalComment" TEXT,
