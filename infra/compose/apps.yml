@@ -16,6 +16,7 @@ x-api-env: &api-env
   S3_BUCKET: ${S3_BUCKET:-electromon}
   S3_REGION: ${S3_REGION:-us-east-1}
   API_PORT: "3001"
+  API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost:3001}
   CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
   LOG_LEVEL: ${LOG_LEVEL:-info}
   METRICS_TOKEN: ${METRICS_TOKEN:-}
