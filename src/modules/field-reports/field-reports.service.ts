@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma } from '@electromon/db';
-import { FieldReportStatus, FieldReportType, IncidentType, IncidentSeverity, isIncidentSeverityUrgent, JwtPayload } from '@electromon/shared';
+import { FieldReportStatus, FieldReportType, IncidentType, IncidentSeverity, isIncidentSeverityUrgent, JwtPayload, NotificationType } from '@electromon/shared';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   getLgaScopeId,
@@ -14,10 +15,17 @@ import {
   ListFieldReportsQueryDto,
   UpdateFieldReportStatusDto,
 } from './dto/field-report.dto';
+import {
+  NOTIFICATION_DISPATCH_EVENT,
+  NotificationDispatchPayload,
+} from '../notifications/notification.events';
 
 @Injectable()
 export class FieldReportsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private eventEmitter: EventEmitter2,
+  ) {}
 
   private readonly include = {
     reporter: { select: { id: true, firstName: true, lastName: true } },
@@ -139,7 +147,7 @@ export class FieldReportsService {
       wardId = wardId ?? unit.wardId;
     }
 
-    return this.prisma.fieldReport.create({
+    const created = await this.prisma.fieldReport.create({
       data: {
         campaignId: dto.campaignId,
         reportedById: user.sub,
@@ -158,6 +166,28 @@ export class FieldReportsService {
       },
       include: this.include,
     });
+
+    if (isIncident) {
+      this.emitNotification({
+        type: NotificationType.INCIDENT_REPORTED,
+        campaignId: created.campaignId,
+        actorUserId: user.sub,
+        entityType: 'FIELD_REPORT',
+        entityId: created.id,
+        sourceEventId: `${created.id}:OPEN`,
+        sendPush: true,
+        fieldReport: {
+          wardId: created.wardId,
+          pollingUnitId: created.pollingUnitId,
+          reportedById: created.reportedById,
+          isUrgent: created.isUrgent,
+          incidentSeverity: created.incidentSeverity,
+          status: created.status,
+        },
+      });
+    }
+
+    return created;
   }
 
   async updateStatus(user: JwtPayload, id: string, dto: UpdateFieldReportStatusDto) {
@@ -205,7 +235,7 @@ export class FieldReportsService {
       throw new ForbiddenException('Invalid status transition');
     }
 
-    return this.prisma.fieldReport.update({
+    const updated = await this.prisma.fieldReport.update({
       where: { id },
       data: {
         status: dto.status,
@@ -215,5 +245,49 @@ export class FieldReportsService {
       },
       include: this.include,
     });
+
+    if (dto.status === FieldReportStatus.RESOLVED) {
+      this.emitNotification({
+        type: NotificationType.INCIDENT_RESOLVED,
+        campaignId: updated.campaignId,
+        actorUserId: user.sub,
+        entityType: 'FIELD_REPORT',
+        entityId: updated.id,
+        sourceEventId: `${updated.id}:RESOLVED`,
+        sendPush: true,
+        fieldReport: {
+          wardId: updated.wardId,
+          pollingUnitId: updated.pollingUnitId,
+          reportedById: updated.reportedById,
+          isUrgent: updated.isUrgent,
+          incidentSeverity: updated.incidentSeverity,
+          status: updated.status,
+        },
+      });
+    } else if (dto.status === FieldReportStatus.ESCALATED) {
+      this.emitNotification({
+        type: NotificationType.INCIDENT_ESCALATED,
+        campaignId: updated.campaignId,
+        actorUserId: user.sub,
+        entityType: 'FIELD_REPORT',
+        entityId: updated.id,
+        sourceEventId: `${updated.id}:ESCALATED`,
+        sendPush: false,
+        fieldReport: {
+          wardId: updated.wardId,
+          pollingUnitId: updated.pollingUnitId,
+          reportedById: updated.reportedById,
+          isUrgent: updated.isUrgent,
+          incidentSeverity: updated.incidentSeverity,
+          status: updated.status,
+        },
+      });
+    }
+
+    return updated;
+  }
+
+  private emitNotification(payload: NotificationDispatchPayload) {
+    this.eventEmitter.emit(NOTIFICATION_DISPATCH_EVENT, payload);
   }
 }

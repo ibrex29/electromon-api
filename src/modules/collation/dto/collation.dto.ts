@@ -20,11 +20,7 @@ export class CreateCollationResultDto {
   @Min(0)
   votesCast?: number;
 
-<<<<<<< HEAD
   @ApiPropertyOptional({ example: 12, description: 'Rejected / invalid ballot papers' })
-=======
-  @ApiPropertyOptional({ example: 12 })
->>>>>>> 3863af1a (changes)
   @IsOptional()
   @IsInt()
   @Min(0)

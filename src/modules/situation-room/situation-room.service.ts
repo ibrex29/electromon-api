@@ -3,18 +3,26 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma } from '@electromon/db';
-import { JwtPayload } from '@electromon/shared';
+import { JwtPayload, NotificationType } from '@electromon/shared';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   CreateSituationUpdateDto,
   ListSituationUpdatesQueryDto,
   UpdateSituationUpdateDto,
 } from './dto/situation-update.dto';
+import {
+  NOTIFICATION_DISPATCH_EVENT,
+  NotificationDispatchPayload,
+} from '../notifications/notification.events';
 
 @Injectable()
 export class SituationRoomService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private eventEmitter: EventEmitter2,
+  ) {}
 
   private readonly include = {
     pollingUnit: { select: { id: true, code: true, name: true } },
@@ -135,7 +143,7 @@ export class SituationRoomService {
     await this.assertCampaignAccess(user.sub, dto.campaignId);
     await this.assertPollingUnitInCampaign(dto.campaignId, dto.pollingUnitId);
 
-    return this.prisma.situationUpdate.create({
+    const created = await this.prisma.situationUpdate.create({
       data: {
         pollingUnitId: dto.pollingUnitId,
         reportedById: user.sub,
@@ -147,6 +155,23 @@ export class SituationRoomService {
       },
       include: this.include,
     });
+
+    this.emitNotification({
+      type: NotificationType.SITUATION_UPDATE,
+      campaignId: dto.campaignId,
+      actorUserId: user.sub,
+      entityType: 'SITUATION_UPDATE',
+      entityId: created.id,
+      sourceEventId: created.id,
+      sendPush: created.isUrgent || created.status === 'INCIDENT',
+      situationUpdate: {
+        pollingUnitId: created.pollingUnitId,
+        isUrgent: created.isUrgent,
+        status: created.status,
+      },
+    });
+
+    return created;
   }
 
   async update(user: JwtPayload, id: string, dto: UpdateSituationUpdateDto) {
@@ -173,5 +198,9 @@ export class SituationRoomService {
     await this.findOne(user, id, campaignId);
     await this.prisma.situationUpdate.delete({ where: { id } });
     return { success: true, message: 'Situation update deleted' };
+  }
+
+  private emitNotification(payload: NotificationDispatchPayload) {
+    this.eventEmitter.emit(NOTIFICATION_DISPATCH_EVENT, payload);
   }
 }

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuditInterceptor } from './common/audit/audit.interceptor';
 import { AuditModule } from './common/audit/audit.module';
@@ -27,6 +28,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
 import { PollingUnitsModule } from './modules/polling-units/polling-units.module';
 import { SituationRoomModule } from './modules/situation-room/situation-room.module';
 import { VolunteersModule } from './modules/volunteers/volunteers.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -35,6 +37,7 @@ import { VolunteersModule } from './modules/volunteers/volunteers.module';
       envFilePath: ['.env', '../../.env'],
     }),
     LoggingModule,
+    EventEmitterModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     PrismaModule,
     RedisModule,
@@ -51,6 +54,7 @@ import { VolunteersModule } from './modules/volunteers/volunteers.module';
     PollingUnitsModule,
     SituationRoomModule,
     FieldReportsModule,
+    NotificationsModule,
     UploadsModule,
     AnalyticsModule,
     HealthModule,

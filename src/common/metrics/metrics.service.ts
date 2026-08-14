@@ -18,6 +18,7 @@ export class MetricsService implements OnModuleInit {
   readonly dbPoolTotal: Gauge<string>;
   readonly dbPoolWaiting: Gauge<string>;
   readonly dependencyUp: Gauge<string>;
+  private readonly notificationPushTotal: Counter<string>;
 
   constructor(private prisma: PrismaService) {
     collectDefaultMetrics({ register: this.registry });
@@ -61,6 +62,13 @@ export class MetricsService implements OnModuleInit {
       labelNames: ['dependency'],
       registers: [this.registry],
     });
+
+    this.notificationPushTotal = new Counter({
+      name: 'electromon_notification_push_total',
+      help: 'Push notification delivery attempts',
+      labelNames: ['result'],
+      registers: [this.registry],
+    });
   }
 
   onModuleInit() {
@@ -80,6 +88,13 @@ export class MetricsService implements OnModuleInit {
 
   setDependencyStatus(dependency: string, up: boolean) {
     this.dependencyUp.set({ dependency }, up ? 1 : 0);
+  }
+
+  recordNotificationPush(
+    result: 'sent' | 'failed' | 'invalid_token' | 'skipped' | 'dry_run',
+    count = 1,
+  ) {
+    this.notificationPushTotal.inc({ result }, count);
   }
 
   async metrics(): Promise<string> {

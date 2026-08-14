@@ -4,11 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   CampaignRole,
   CollationLevel,
   CollationResultStatus,
   JwtPayload,
+  NotificationType,
   ScopeType,
   getParentLevel,
   getCollationLevelForRole,
@@ -18,6 +20,10 @@ import { Prisma } from '@electromon/db';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ScopeResolverService } from '../../common/collation/scope-resolver.service';
 import { CreateCollationResultDto, RejectCollationResultDto, ApproveCollationResultDto } from './dto/collation.dto';
+import {
+  NOTIFICATION_DISPATCH_EVENT,
+  NotificationDispatchPayload,
+} from '../notifications/notification.events';
 
 const EDITABLE_STATUSES = new Set<CollationResultStatus>([
   CollationResultStatus.DRAFT,
@@ -29,6 +35,7 @@ export class CollationService {
   constructor(
     private prisma: PrismaService,
     private scopeResolver: ScopeResolverService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async getDashboard(user: JwtPayload) {
@@ -889,7 +896,7 @@ export class CollationService {
       },
     });
 
-    await this.writeActionLog({
+    const log = await this.writeActionLog({
       campaignId: submitted.campaignId,
       collationResultId: submitted.id,
       action: 'SUBMITTED',
@@ -902,6 +909,24 @@ export class CollationService {
         scopeId: submitted.scopeId,
       },
     });
+
+    if (submitted.level === CollationLevel.POLLING_UNIT) {
+      this.emitNotification({
+        type: NotificationType.RESULT_SUBMITTED,
+        campaignId: submitted.campaignId,
+        actorUserId: user.sub,
+        entityType: 'COLLATION_RESULT',
+        entityId: submitted.id,
+        sourceEventId: log.id,
+        sendPush: true,
+        collationResult: {
+          level: submitted.level,
+          scopeType: submitted.scopeType,
+          scopeId: submitted.scopeId,
+          submittedById: submitted.submittedById,
+        },
+      });
+    }
 
     return submitted;
   }
@@ -940,7 +965,7 @@ export class CollationService {
       },
     });
 
-    await this.writeActionLog({
+    const log = await this.writeActionLog({
       campaignId: approved.campaignId,
       collationResultId: approved.id,
       action: 'APPROVED',
@@ -954,6 +979,24 @@ export class CollationService {
         scopeId: approved.scopeId,
       },
     });
+
+    if (approved.level === CollationLevel.POLLING_UNIT) {
+      this.emitNotification({
+        type: NotificationType.RESULT_APPROVED,
+        campaignId: approved.campaignId,
+        actorUserId: user.sub,
+        entityType: 'COLLATION_RESULT',
+        entityId: approved.id,
+        sourceEventId: log.id,
+        sendPush: true,
+        collationResult: {
+          level: approved.level,
+          scopeType: approved.scopeType,
+          scopeId: approved.scopeId,
+          submittedById: approved.submittedById,
+        },
+      });
+    }
 
     // Roll up approved figures into this level's result draft
     await this.rollupToParent(
@@ -1018,7 +1061,7 @@ export class CollationService {
       },
     });
 
-    await this.writeActionLog({
+    const log = await this.writeActionLog({
       campaignId: rejected.campaignId,
       collationResultId: rejected.id,
       action: 'REJECTED',
@@ -1034,6 +1077,40 @@ export class CollationService {
         affectedPollingUnitIds: flaggedPollingUnitIds,
       },
     });
+
+    if (rejected.level === CollationLevel.POLLING_UNIT) {
+      this.emitNotification({
+        type: NotificationType.RESULT_RETURNED,
+        campaignId: rejected.campaignId,
+        actorUserId: user.sub,
+        entityType: 'COLLATION_RESULT',
+        entityId: rejected.id,
+        sourceEventId: log.id,
+        sendPush: true,
+        collationResult: {
+          level: rejected.level,
+          scopeType: rejected.scopeType,
+          scopeId: rejected.scopeId,
+          submittedById: rejected.submittedById,
+        },
+      });
+    } else if (rejected.level === CollationLevel.WARD) {
+      this.emitNotification({
+        type: NotificationType.WARD_RETURNED_BY_LGA,
+        campaignId: rejected.campaignId,
+        actorUserId: user.sub,
+        entityType: 'COLLATION_RESULT',
+        entityId: rejected.id,
+        sourceEventId: log.id,
+        sendPush: true,
+        collationResult: {
+          level: rejected.level,
+          scopeType: rejected.scopeType,
+          scopeId: rejected.scopeId,
+          submittedById: rejected.submittedById,
+        },
+      });
+    }
 
     // Pull returned PU out of the ward rollup totals (keep ward REJECTED — do not re-forward)
     if (canReturnApprovedAfterLga) {
@@ -1089,7 +1166,7 @@ export class CollationService {
     });
 
     if (updated) {
-      await this.writeActionLog({
+      const log = await this.writeActionLog({
         campaignId: updated.campaignId,
         collationResultId: updated.id,
         action: 'SUBMITTED',
@@ -1098,6 +1175,21 @@ export class CollationService {
         toStatus: CollationResultStatus.SUBMITTED,
         comment: 'Re-submitted to LGA after reviewing ward totals',
         metadata: { level: updated.level, scopeType: updated.scopeType, scopeId: updated.scopeId },
+      });
+      this.emitNotification({
+        type: NotificationType.WARD_FORWARDED_TO_LGA,
+        campaignId: updated.campaignId,
+        actorUserId: user.sub,
+        entityType: 'COLLATION_RESULT',
+        entityId: updated.id,
+        sourceEventId: log.id,
+        sendPush: false,
+        collationResult: {
+          level: updated.level,
+          scopeType: updated.scopeType,
+          scopeId: updated.scopeId,
+          submittedById: updated.submittedById,
+        },
       });
     }
 
@@ -1620,7 +1712,7 @@ export class CollationService {
         : CollationResultStatus.DRAFT;
     const now = new Date();
 
-    await this.prisma.collationResult.upsert({
+    const parent = await this.prisma.collationResult.upsert({
       where: {
         campaignId_level_scopeType_scopeId: {
           campaignId,
@@ -1654,5 +1746,27 @@ export class CollationService {
         approvalComment: isLgaRollup ? null : undefined,
       },
     });
+
+    if (isWardRollup && submittedById) {
+      this.emitNotification({
+        type: NotificationType.WARD_FORWARDED_TO_LGA,
+        campaignId,
+        actorUserId: submittedById,
+        entityType: 'COLLATION_RESULT',
+        entityId: parent.id,
+        sourceEventId: `${parent.id}:FORWARDED`,
+        sendPush: false,
+        collationResult: {
+          level: parent.level,
+          scopeType: parent.scopeType,
+          scopeId: parent.scopeId,
+          submittedById: parent.submittedById,
+        },
+      });
+    }
+  }
+
+  private emitNotification(payload: NotificationDispatchPayload) {
+    this.eventEmitter.emit(NOTIFICATION_DISPATCH_EVENT, payload);
   }
 }

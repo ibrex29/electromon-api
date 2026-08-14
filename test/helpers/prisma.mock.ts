@@ -15,6 +15,7 @@ export type MockPrismaService = {
   };
   campaignMembership: {
     findFirst: jest.Mock;
+    findMany: jest.Mock;
     count: jest.Mock;
   };
   supportGroup: {
@@ -60,6 +61,7 @@ export type MockPrismaService = {
   };
   ward: {
     findFirst: jest.Mock;
+    findUnique: jest.Mock;
   };
   situationUpdate: {
     findMany: jest.Mock;
@@ -72,8 +74,27 @@ export type MockPrismaService = {
   };
   fieldReport: {
     findMany: jest.Mock;
+    findUnique: jest.Mock;
     create: jest.Mock;
+    update: jest.Mock;
     count: jest.Mock;
+  };
+  collationResult: {
+    findUnique: jest.Mock;
+    upsert: jest.Mock;
+  };
+  notification: {
+    create: jest.Mock;
+    findMany: jest.Mock;
+    findFirst: jest.Mock;
+    update: jest.Mock;
+    updateMany: jest.Mock;
+    count: jest.Mock;
+  };
+  deviceToken: {
+    upsert: jest.Mock;
+    findMany: jest.Mock;
+    updateMany: jest.Mock;
   };
   refreshToken: {
     create: jest.Mock;
@@ -106,6 +127,7 @@ export function createMockPrismaService(): MockPrismaService {
     },
     campaignMembership: {
       findFirst: jest.fn(),
+      findMany: jest.fn(),
       count: jest.fn(),
     },
     supportGroup: {
@@ -151,6 +173,7 @@ export function createMockPrismaService(): MockPrismaService {
     },
     ward: {
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
     },
     situationUpdate: {
       findMany: jest.fn(),
@@ -163,8 +186,27 @@ export function createMockPrismaService(): MockPrismaService {
     },
     fieldReport: {
       findMany: jest.fn(),
+      findUnique: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
       count: jest.fn(),
+    },
+    collationResult: {
+      findUnique: jest.fn(),
+      upsert: jest.fn(),
+    },
+    notification: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+      count: jest.fn(),
+    },
+    deviceToken: {
+      upsert: jest.fn(),
+      findMany: jest.fn(),
+      updateMany: jest.fn(),
     },
     refreshToken: {
       create: jest.fn(),
