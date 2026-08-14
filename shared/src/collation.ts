@@ -113,10 +113,9 @@ const LEVEL_META: Record<
     level: CollationLevel.LGA,
     levelLabel: 'Local Government Area (LGA)',
     levelOrder: 3,
-    canSubmit: true,
+    canSubmit: false,
     canApprove: true,
     approvesFromLevel: CollationLevel.WARD,
-    submitsToLevel: CollationLevel.STATE,
     route: '/dashboard/lga',
   },
   [CollationLevel.STATE]: {

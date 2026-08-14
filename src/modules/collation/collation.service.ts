@@ -1609,11 +1609,16 @@ export class CollationService {
     );
 
     const partyResults = this.aggregatePartyResults(approvedChildren);
-    const autoSubmitUpstream =
-      level === CollationLevel.WARD || level === CollationLevel.LGA;
-    const status = autoSubmitUpstream
+    // Ward rollups auto-submit to LGA for review.
+    // LGA rollups are final once the LGA officer has approved wards — no state/director step.
+    const isWardRollup = level === CollationLevel.WARD;
+    const isLgaRollup = level === CollationLevel.LGA;
+    const status = isWardRollup
       ? CollationResultStatus.SUBMITTED
-      : CollationResultStatus.DRAFT;
+      : isLgaRollup
+        ? CollationResultStatus.APPROVED
+        : CollationResultStatus.DRAFT;
+    const now = new Date();
 
     await this.prisma.collationResult.upsert({
       where: {
@@ -1632,16 +1637,21 @@ export class CollationService {
         ...totals,
         partyResults,
         status,
-        submittedById: autoSubmitUpstream ? submittedById : undefined,
-        submittedAt: autoSubmitUpstream ? new Date() : undefined,
+        submittedById: isWardRollup || isLgaRollup ? submittedById : undefined,
+        submittedAt: isWardRollup || isLgaRollup ? now : undefined,
+        approvedById: isLgaRollup ? submittedById : undefined,
+        approvedAt: isLgaRollup ? now : undefined,
       },
       update: {
         ...totals,
         partyResults,
         status,
-        submittedById: autoSubmitUpstream ? submittedById : undefined,
-        submittedAt: autoSubmitUpstream ? new Date() : undefined,
+        submittedById: isWardRollup || isLgaRollup ? submittedById : undefined,
+        submittedAt: isWardRollup || isLgaRollup ? now : undefined,
+        approvedById: isLgaRollup ? submittedById : undefined,
+        approvedAt: isLgaRollup ? now : undefined,
         rejectionReason: null,
+        approvalComment: isLgaRollup ? null : undefined,
       },
     });
   }

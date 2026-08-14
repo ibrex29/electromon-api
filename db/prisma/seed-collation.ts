@@ -685,9 +685,9 @@ export async function seedHadejiaCollationResults(
     }
   }
 
-  // LGA rollup from approved wards only → status SUBMITTED (awaiting state)
+  // LGA rollup from approved wards — final at LGA (no director re-approval)
   await seedLgaRollupFromWards(prisma, campaignId, hadejiaLgaId, partyCodes, {
-    status: 'SUBMITTED',
+    status: 'APPROVED',
     approvedOnly: true,
   });
 
