@@ -2,32 +2,65 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsArray, IsInt, IsObject, IsOptional, IsString, Min, MinLength } from 'class-validator';
 
 export class CreateCollationResultDto {
-  @ApiPropertyOptional({ example: 850 })
+  @ApiPropertyOptional({ example: 289, description: 'EC8A: Number of Voters on the Register' })
   @IsOptional()
   @IsInt()
   @Min(0)
   registeredVoters?: number;
 
-  @ApiPropertyOptional({ example: 620 })
+  @ApiPropertyOptional({ example: 210, description: 'EC8A: Number of Accredited Voters' })
   @IsOptional()
   @IsInt()
   @Min(0)
   accreditedVoters?: number;
 
-  @ApiPropertyOptional({ example: 615 })
+  @ApiPropertyOptional({
+    example: 289,
+    description: 'EC8A: Number of Ballot Papers Issued to the Polling Unit',
+  })
   @IsOptional()
   @IsInt()
   @Min(0)
-  votesCast?: number;
+  ballotPapersIssued?: number;
 
-  @ApiPropertyOptional({ example: 12, description: 'Rejected / invalid ballot papers' })
+  @ApiPropertyOptional({ example: 79, description: 'EC8A: Number of Unused Ballot Papers' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  unusedBallotPapers?: number;
+
+  @ApiPropertyOptional({ example: 0, description: 'EC8A: Number of Spoiled Ballot Papers' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  spoiledBallotPapers?: number;
+
+  @ApiPropertyOptional({ example: 3, description: 'EC8A: Number of Rejected Ballots' })
   @IsOptional()
   @IsInt()
   @Min(0)
   invalidVotes?: number;
 
   @ApiPropertyOptional({
-    example: { APC: 320, PDP: 210, NNPP: 85 },
+    example: 207,
+    description: 'EC8A: Number of Total Valid Votes (party totals)',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  votesCast?: number;
+
+  @ApiPropertyOptional({
+    example: 210,
+    description: 'EC8A: Total Number of Used Ballot Papers',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  usedBallotPapers?: number;
+
+  @ApiPropertyOptional({
+    example: { APC: 40, A: 159, ADC: 4 },
     description: 'Party vote totals keyed by party code',
   })
   @IsOptional()

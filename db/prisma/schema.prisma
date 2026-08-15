@@ -597,10 +597,22 @@ model CollationResult {
   level            CollationLevel
   scopeType        ScopeType
   scopeId          String
+  /// EC8A: Number of Voters on the Register
   registeredVoters Int?
+  /// EC8A: Number of Accredited Voters
   accreditedVoters Int?
-  votesCast        Int?
+  /// EC8A: Number of Ballot Papers Issued to the Polling Unit
+  ballotPapersIssued Int?
+  /// EC8A: Number of Unused Ballot Papers
+  unusedBallotPapers Int?
+  /// EC8A: Number of Spoiled Ballot Papers
+  spoiledBallotPapers Int?
+  /// EC8A: Number of Rejected Ballots
   invalidVotes     Int?
+  /// EC8A: Number of Total Valid Votes (sum of party scores)
+  votesCast        Int?
+  /// EC8A: Total Number of Used Ballot Papers (spoiled + rejected + valid)
+  usedBallotPapers Int?
   partyResults     Json?
   ec8aPhotoUrls    String[]              @default([])
   approvalComment  String?
