@@ -522,49 +522,98 @@ export class CollationService {
       throw new ForbiddenException('This endpoint is for LGA-scoped collation officers');
     }
 
-    const wardIds = await this.getChildScopeIds(
-      ScopeType.LGA,
-      user.scopeId,
-      CollationLevel.WARD,
-    );
+    const wards = await this.prisma.ward.findMany({
+      where: { lgaId: user.scopeId },
+      select: { id: true, name: true, registrationAreaCode: true, lgaId: true },
+      orderBy: { name: 'asc' },
+    });
+    const wardIds = wards.map((w) => w.id);
 
-    const results = await this.enrichWardResults(
-      await this.prisma.collationResult.findMany({
-        where: {
-          campaignId: user.campaignId,
-          level: CollationLevel.WARD,
-          scopeId: { in: wardIds },
-          status: {
-            in: [
-              CollationResultStatus.SUBMITTED,
-              CollationResultStatus.APPROVED,
-              CollationResultStatus.REJECTED,
-            ],
-          },
-        },
-        orderBy: { submittedAt: 'desc' },
-        include: {
-          submittedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
-          approvedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
-        },
-      }),
-    );
+    if (wardIds.length === 0) {
+      return { totalWards: 0, data: [] };
+    }
 
+    const results = await this.prisma.collationResult.findMany({
+      where: {
+        campaignId: user.campaignId,
+        level: CollationLevel.WARD,
+        scopeId: { in: wardIds },
+      },
+      orderBy: { submittedAt: 'desc' },
+      include: {
+        submittedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+        approvedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
+    });
+
+    const resultByWard = new Map(results.map((r) => [r.scopeId, r]));
     const readinessByWard = await this.getWardPuReadinessMap(user.campaignId!, wardIds);
+
+    const emptyReadiness = {
+      totalPus: 0,
+      approvedPus: 0,
+      submittedPus: 0,
+      rejectedPus: 0,
+      missingPus: 0,
+      readyForLgaApproval: false,
+    };
+
+    const data = wards.map((ward) => {
+      const result = resultByWard.get(ward.id);
+      const puReadiness = readinessByWard.get(ward.id) ?? { ...emptyReadiness };
+      if (!result) {
+        return {
+          id: `not-started:${ward.id}`,
+          campaignId: user.campaignId!,
+          level: CollationLevel.WARD,
+          scopeType: ScopeType.WARD,
+          scopeId: ward.id,
+          registeredVoters: null,
+          accreditedVoters: null,
+          votesCast: null,
+          invalidVotes: null,
+          partyResults: null,
+          ec8aPhotoUrls: [] as string[],
+          approvalComment: null,
+          status: 'NOT_STARTED' as const,
+          submittedById: null,
+          submittedAt: null,
+          approvedById: null,
+          approvedAt: null,
+          rejectionReason: null,
+          parentResultId: null,
+          createdAt: null,
+          updatedAt: null,
+          submittedBy: null,
+          approvedBy: null,
+          ward,
+          puReadiness,
+        };
+      }
+
+      return {
+        ...result,
+        ward,
+        puReadiness,
+      };
+    });
+
+    const statusOrder: Record<string, number> = {
+      SUBMITTED: 0,
+      REJECTED: 1,
+      DRAFT: 2,
+      NOT_STARTED: 3,
+      APPROVED: 4,
+    };
+    data.sort((a, b) => {
+      const orderDiff = (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9);
+      if (orderDiff !== 0) return orderDiff;
+      return (a.ward?.name ?? '').localeCompare(b.ward?.name ?? '');
+    });
 
     return {
       totalWards: wardIds.length,
-      data: results.map((result) => ({
-        ...result,
-        puReadiness: readinessByWard.get(result.scopeId) ?? {
-          totalPus: 0,
-          approvedPus: 0,
-          submittedPus: 0,
-          rejectedPus: 0,
-          missingPus: 0,
-          readyForLgaApproval: false,
-        },
-      })),
+      data,
     };
   }
 
