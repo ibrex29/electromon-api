@@ -39,7 +39,14 @@ export function getLgaScopeId(user: JwtPayload): string | undefined {
 }
 
 export async function assertPollingUnitInWard(
-  prisma: { pollingUnit: { findFirst: (args: unknown) => Promise<{ wardId: string } | null> } },
+  prisma: {
+    pollingUnit: {
+      // Prisma's findFirst generics are not assignable to `(args: unknown) => …`;
+      // keep this helper loosely typed so PrismaService can be passed in.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      findFirst: (args?: any) => Promise<{ wardId: string } | null>;
+    };
+  },
   pollingUnitId: string,
   wardId: string,
 ) {

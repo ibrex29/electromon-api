@@ -132,7 +132,16 @@ export class FieldReportsService {
       dto.isUrgent ??
       (dto.incidentSeverity ? isIncidentSeverityUrgent(dto.incidentSeverity) : false);
 
+    const wardScopeId = isWardScopedUser(user) ? getWardScopeId(user) : null;
     let wardId = dto.wardId;
+
+    if (wardScopeId) {
+      if (dto.wardId && dto.wardId !== wardScopeId) {
+        throw new ForbiddenException('You can only report incidents for your assigned ward');
+      }
+      wardId = wardScopeId;
+    }
+
     if (dto.pollingUnitId) {
       const stateId = (
         await this.prisma.campaign.findUniqueOrThrow({
@@ -144,8 +153,19 @@ export class FieldReportsService {
         where: { id: dto.pollingUnitId, ward: { lga: { stateId } } },
       });
       if (!unit) throw new NotFoundException('Polling unit not found in campaign state');
+      if (wardScopeId) {
+        await assertPollingUnitInWard(this.prisma, dto.pollingUnitId, wardScopeId);
+      }
       wardId = wardId ?? unit.wardId;
     }
+
+    if (wardScopeId && !wardId) {
+      wardId = wardScopeId;
+    }
+
+    // Ward officers escalate to LGA on create; PU agents leave as OPEN for ward triage.
+    const initialStatus =
+      wardScopeId && isIncident ? FieldReportStatus.ESCALATED : FieldReportStatus.OPEN;
 
     const created = await this.prisma.fieldReport.create({
       data: {
@@ -162,20 +182,26 @@ export class FieldReportsService {
         longitude: dto.longitude,
         isUrgent,
         photoUrls: dto.photoUrls ?? [],
-        status: FieldReportStatus.OPEN,
+        status: initialStatus,
+        ...(initialStatus === FieldReportStatus.ESCALATED
+          ? { handledById: user.sub, handledAt: new Date() }
+          : {}),
       },
       include: this.include,
     });
 
     if (isIncident) {
       this.emitNotification({
-        type: NotificationType.INCIDENT_REPORTED,
+        type:
+          initialStatus === FieldReportStatus.ESCALATED
+            ? NotificationType.INCIDENT_ESCALATED
+            : NotificationType.INCIDENT_REPORTED,
         campaignId: created.campaignId,
         actorUserId: user.sub,
         entityType: 'FIELD_REPORT',
         entityId: created.id,
-        sourceEventId: `${created.id}:OPEN`,
-        sendPush: true,
+        sourceEventId: `${created.id}:${initialStatus}`,
+        sendPush: initialStatus === FieldReportStatus.OPEN,
         fieldReport: {
           wardId: created.wardId,
           pollingUnitId: created.pollingUnitId,
