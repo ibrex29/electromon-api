@@ -19,15 +19,17 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1');
 
-  const corsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:3000')
+  // Temporary: reflect any Origin (Vercel preview + localhost). Tighten via CORS_ORIGIN later.
+  const corsRaw = (process.env.CORS_ORIGIN ?? '*').trim();
+  const corsOrigins = corsRaw
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+  const allowAllOrigins = corsOrigins.length === 0 || corsOrigins.includes('*');
 
   app.enableCors({
     origin: (origin, callback) => {
-      // Reflect a single allowed origin (browsers reject comma-joined ACAO values).
-      if (!origin || corsOrigins.includes(origin)) {
+      if (allowAllOrigins || !origin || corsOrigins.includes(origin)) {
         callback(null, true);
         return;
       }

@@ -787,6 +787,11 @@ export class CollationBrowseService {
       pollingUnitIds: pollingUnits.map((pu) => pu.id),
     });
 
+    const reportingMaps = await this.loadPuReportingMaps(
+      user.campaignId!,
+      [...new Set(pollingUnits.map((pu) => pu.ward.lgaId))],
+    );
+
     return this.withPartyMeta(
       {
         mode: 'detail' as const,
@@ -797,6 +802,11 @@ export class CollationBrowseService {
           const result = wardResultMap.get(ward.id);
           const parties = parsePartyTotals(result?.partyResults, partyConfig.partyColumns);
           const incidents = incidentStats.byWard.get(ward.id) ?? emptyIncidentBucket();
+          const cov = reportingMaps.byWard.get(ward.id) ?? {
+            total: 0,
+            reported: 0,
+            lastAt: null,
+          };
           return this.mapOutcomeRow({
             id: ward.id,
             name: ward.name.toUpperCase(),
@@ -812,12 +822,15 @@ export class CollationBrowseService {
             incidentUrgentCount: incidents.urgent,
             incidentWeight: incidents.weight,
             maxSeverity: incidents.maxSeverity,
+            reporting: this.reportingStats(cov.total, cov.reported),
+            lastResultAt: cov.lastAt?.toISOString() ?? null,
           });
         }),
         pollingUnits: pollingUnits.map((pu) => {
           const result = resultMap.get(pu.id);
           const parties = parsePartyTotals(result?.partyResults, partyConfig.partyColumns);
           const incidents = incidentStats.byPu.get(pu.id) ?? emptyIncidentBucket();
+          const hasResult = Boolean(result);
           return {
             ...this.mapOutcomeRow({
               id: pu.id,
@@ -834,6 +847,7 @@ export class CollationBrowseService {
               incidentUrgentCount: incidents.urgent,
               incidentWeight: incidents.weight,
               maxSeverity: incidents.maxSeverity,
+              reporting: this.reportingStats(1, hasResult ? 1 : 0),
             }),
             wardId: pu.wardId,
             wardName: pu.ward.name.toUpperCase(),
@@ -873,9 +887,15 @@ export class CollationBrowseService {
     });
     const resultMap = new Map(results.map((r) => [r.scopeId, r]));
 
-    const incidentStats = await this.aggregateIncidentsByScope(user.campaignId!, {
-      lgaIds: lgas.map((l) => l.id),
-    });
+    const [incidentStats, reportingMaps] = await Promise.all([
+      this.aggregateIncidentsByScope(user.campaignId!, {
+        lgaIds: lgas.map((l) => l.id),
+      }),
+      this.loadPuReportingMaps(
+        user.campaignId!,
+        lgas.map((l) => l.id),
+      ),
+    ]);
 
     return this.withPartyMeta(
       {
@@ -886,6 +906,11 @@ export class CollationBrowseService {
           const result = resultMap.get(lga.id);
           const parties = parsePartyTotals(result?.partyResults, partyConfig.partyColumns);
           const incidents = incidentStats.byLga.get(lga.id) ?? emptyIncidentBucket();
+          const cov = reportingMaps.byLga.get(lga.id) ?? {
+            total: 0,
+            reported: 0,
+            lastAt: null,
+          };
           return this.mapOutcomeRow({
             id: lga.id,
             name: lga.name.toUpperCase(),
@@ -898,6 +923,8 @@ export class CollationBrowseService {
             incidentUrgentCount: incidents.urgent,
             incidentWeight: incidents.weight,
             maxSeverity: incidents.maxSeverity,
+            reporting: this.reportingStats(cov.total, cov.reported),
+            lastResultAt: cov.lastAt?.toISOString() ?? null,
           });
         }),
         wards: [],
@@ -927,7 +954,7 @@ export class CollationBrowseService {
     });
     const lgaIds = lgas.map((l) => l.id);
 
-    const [lgaResults, puTotal, reportedInState, openIncidents, urgentIncidents] = await Promise.all([
+    const [lgaResults, reportingMaps, openIncidents, urgentIncidents] = await Promise.all([
       this.prisma.collationResult.findMany({
         where: {
           campaignId: user.campaignId!,
@@ -936,16 +963,7 @@ export class CollationBrowseService {
         },
         select: { scopeId: true, status: true, partyResults: true, votesCast: true },
       }),
-      this.prisma.pollingUnit.count({
-        where: { ward: { lgaId: { in: lgaIds } } },
-      }),
-      this.prisma.collationResult.findMany({
-        where: {
-          campaignId: user.campaignId!,
-          level: CollationLevel.POLLING_UNIT,
-        },
-        select: { scopeId: true },
-      }),
+      this.loadPuReportingMaps(user.campaignId!, lgaIds),
       this.prisma.fieldReport.count({
         where: {
           campaignId: user.campaignId!,
@@ -975,16 +993,21 @@ export class CollationBrowseService {
       }),
     ]);
 
-    const reportedIds = reportedInState.map((r) => r.scopeId);
-    const puWithResult =
-      reportedIds.length === 0
-        ? 0
-        : await this.prisma.pollingUnit.count({
-            where: {
-              id: { in: reportedIds },
-              ward: { lgaId: { in: lgaIds } },
-            },
-          });
+    const puTotal = [...reportingMaps.byLga.values()].reduce((sum, r) => sum + r.total, 0);
+    const puWithResult = [...reportingMaps.byLga.values()].reduce(
+      (sum, r) => sum + r.reported,
+      0,
+    );
+
+    const windowMinutes = 15;
+    const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000);
+    let newlyReported = 0;
+    let newlyApproved = 0;
+    for (const row of reportingMaps.puResults) {
+      const reportedAt = row.submittedAt ?? row.createdAt;
+      if (reportedAt >= windowStart) newlyReported += 1;
+      if (row.approvedAt && row.approvedAt >= windowStart) newlyApproved += 1;
+    }
 
     const resultByLga = new Map(lgaResults.map((r) => [r.scopeId, r]));
     const partyTotals = emptyPartyTotals(partyConfig.partyColumns);
@@ -999,6 +1022,8 @@ export class CollationBrowseService {
       leadingParty: string | null;
       resultStatus: string;
       share: number;
+      reporting: { pollingUnitsTotal: number; pollingUnitsReported: number; percent: number };
+      lastResultAt: string | null;
     }> = [];
 
     let wins = 0;
@@ -1026,6 +1051,8 @@ export class CollationBrowseService {
       else if (outcome === 'TIE') ties += 1;
       else pending += 1;
 
+      const cov = reportingMaps.byLga.get(lga.id) ?? { total: 0, reported: 0, lastAt: null };
+
       lgaRows.push({
         id: lga.id,
         name: lga.name.toUpperCase(),
@@ -1036,9 +1063,12 @@ export class CollationBrowseService {
         outcome,
         leadingParty,
         resultStatus: result?.status ?? 'NOT_STARTED',
-        share: totalVotes > 0 && partyConfig.clientPartyCode
-          ? Math.round((clientVotes / totalVotes) * 1000) / 10
-          : 0,
+        share:
+          totalVotes > 0 && partyConfig.clientPartyCode
+            ? Math.round((clientVotes / totalVotes) * 1000) / 10
+            : 0,
+        reporting: this.reportingStats(cov.total, cov.reported),
+        lastResultAt: cov.lastAt?.toISOString() ?? null,
       });
     }
 
@@ -1050,7 +1080,10 @@ export class CollationBrowseService {
         code,
         name: partyConfig.trackedParties.find((p) => p.code === code)?.name ?? code,
         votes: partyTotals[code] ?? 0,
-        share: statewideTotal > 0 ? Math.round(((partyTotals[code] ?? 0) / statewideTotal) * 1000) / 10 : 0,
+        share:
+          statewideTotal > 0
+            ? Math.round(((partyTotals[code] ?? 0) / statewideTotal) * 1000) / 10
+            : 0,
       }))
       .sort((a, b) => b.votes - a.votes);
 
@@ -1093,6 +1126,11 @@ export class CollationBrowseService {
             pollingUnitsReported: puWithResult,
             percent: reportingPct,
           },
+          velocity: {
+            windowMinutes,
+            newlyReported,
+            newlyApproved,
+          },
           incidents: {
             open: openIncidents,
             urgent: urgentIncidents,
@@ -1123,6 +1161,8 @@ export class CollationBrowseService {
     incidentUrgentCount: number;
     incidentWeight: number;
     maxSeverity: string | null;
+    reporting?: { pollingUnitsTotal: number; pollingUnitsReported: number; percent: number };
+    lastResultAt?: string | null;
   }) {
     const totalVotes = Object.values(input.parties).reduce((sum, n) => sum + n, 0);
     const { outcome, leadingParty, margin } = computeOutcome(
@@ -1147,7 +1187,89 @@ export class CollationBrowseService {
       incidentUrgentCount: input.incidentUrgentCount,
       incidentWeight: input.incidentWeight,
       maxSeverity: input.maxSeverity,
+      reporting: input.reporting,
+      lastResultAt: input.lastResultAt ?? null,
     };
+  }
+
+  private reportingStats(total: number, reported: number) {
+    return {
+      pollingUnitsTotal: total,
+      pollingUnitsReported: reported,
+      percent: total > 0 ? Math.round((reported / total) * 1000) / 10 : 0,
+    };
+  }
+
+  /** PU totals + reported counts keyed by LGA and ward for coverage layers. */
+  private async loadPuReportingMaps(campaignId: string, lgaIds: string[]) {
+    const empty = {
+      byLga: new Map<string, { total: number; reported: number; lastAt: Date | null }>(),
+      byWard: new Map<string, { total: number; reported: number; lastAt: Date | null }>(),
+      puResults: [] as Array<{
+        scopeId: string;
+        submittedAt: Date | null;
+        approvedAt: Date | null;
+        createdAt: Date;
+      }>,
+    };
+    if (!lgaIds.length) return empty;
+
+    const pus = await this.prisma.pollingUnit.findMany({
+      where: { ward: { lgaId: { in: lgaIds } } },
+      select: {
+        id: true,
+        wardId: true,
+        ward: { select: { lgaId: true } },
+      },
+    });
+
+    const byLga = new Map<string, { total: number; reported: number; lastAt: Date | null }>();
+    const byWard = new Map<string, { total: number; reported: number; lastAt: Date | null }>();
+    for (const id of lgaIds) byLga.set(id, { total: 0, reported: 0, lastAt: null });
+
+    for (const pu of pus) {
+      const lgaId = pu.ward.lgaId;
+      const lga = byLga.get(lgaId) ?? { total: 0, reported: 0, lastAt: null };
+      lga.total += 1;
+      byLga.set(lgaId, lga);
+
+      const ward = byWard.get(pu.wardId) ?? { total: 0, reported: 0, lastAt: null };
+      ward.total += 1;
+      byWard.set(pu.wardId, ward);
+    }
+
+    const puResults = await this.prisma.collationResult.findMany({
+      where: {
+        campaignId,
+        level: CollationLevel.POLLING_UNIT,
+        scopeId: { in: pus.map((p) => p.id) },
+      },
+      select: {
+        scopeId: true,
+        submittedAt: true,
+        approvedAt: true,
+        createdAt: true,
+      },
+    });
+
+    const puById = new Map(pus.map((p) => [p.id, p]));
+    for (const result of puResults) {
+      const pu = puById.get(result.scopeId);
+      if (!pu) continue;
+      const stamp = result.submittedAt ?? result.createdAt;
+      const lga = byLga.get(pu.ward.lgaId);
+      if (lga) {
+        lga.reported += 1;
+        if (!lga.lastAt || stamp > lga.lastAt) lga.lastAt = stamp;
+      }
+      const ward = byWard.get(pu.wardId);
+      if (ward) {
+        ward.reported += 1;
+        if (!ward.lastAt || stamp > ward.lastAt) ward.lastAt = stamp;
+      }
+    }
+
+    return { byLga, byWard, puResults };
   }
 
   private async aggregateIncidentsByScope(

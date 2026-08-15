@@ -454,6 +454,12 @@ export class AgentsService {
 
     const managedLgaId = this.resolveManagedLgaId(user, query.lgaId);
     const kind = query.kind ?? 'all';
+
+    // LGA officers manage their LGA team (ward + PU only), not peer LGA officers.
+    if (isLgaScopedUser(user) && kind === 'lga') {
+      return [];
+    }
+
     const roleFilter =
       kind === 'lga'
         ? [LGA_AGENT_ROLE]
@@ -461,7 +467,9 @@ export class AgentsService {
           ? [WARD_AGENT_ROLE]
           : kind === 'pu'
             ? [PU_AGENT_ROLE]
-            : [...MANAGEABLE_AGENT_ROLES];
+            : isLgaScopedUser(user)
+              ? [WARD_AGENT_ROLE, PU_AGENT_ROLE]
+              : [...MANAGEABLE_AGENT_ROLES];
 
     // No LGA filter (director/state): list all campaign LGA/ward/PU agents
     if (!managedLgaId) {
@@ -555,7 +563,7 @@ export class AgentsService {
     ).map((p) => p.id);
 
     const scopeOr: Prisma.CampaignMembershipWhereInput[] = [];
-    if ((kind === 'lga' || kind === 'all') && !query.wardId) {
+    if ((kind === 'lga' || kind === 'all') && !query.wardId && !isLgaScopedUser(user)) {
       scopeOr.push({ scopeType: ScopeType.LGA, scopeId: managedLgaId });
     }
     if ((kind === 'ward' || kind === 'all') && wardIds.length) {

@@ -552,17 +552,20 @@ export class CollationService {
 
     const readinessByWard = await this.getWardPuReadinessMap(user.campaignId!, wardIds);
 
-    return results.map((result) => ({
-      ...result,
-      puReadiness: readinessByWard.get(result.scopeId) ?? {
-        totalPus: 0,
-        approvedPus: 0,
-        submittedPus: 0,
-        rejectedPus: 0,
-        missingPus: 0,
-        readyForLgaApproval: false,
-      },
-    }));
+    return {
+      totalWards: wardIds.length,
+      data: results.map((result) => ({
+        ...result,
+        puReadiness: readinessByWard.get(result.scopeId) ?? {
+          totalPus: 0,
+          approvedPus: 0,
+          submittedPus: 0,
+          rejectedPus: 0,
+          missingPus: 0,
+          readyForLgaApproval: false,
+        },
+      })),
+    };
   }
 
   async listLgaWardPuResults(user: JwtPayload, wardId: string) {
