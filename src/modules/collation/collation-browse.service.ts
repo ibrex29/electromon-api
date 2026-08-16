@@ -950,7 +950,12 @@ export class CollationBrowseService {
     const lgas = await this.prisma.lGA.findMany({
       where: lgaWhere,
       orderBy: { name: 'asc' },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        senatorialDistrictId: true,
+        senatorialDistrict: { select: { id: true, name: true } },
+      },
     });
     const lgaIds = lgas.map((l) => l.id);
 
@@ -1024,6 +1029,8 @@ export class CollationBrowseService {
       share: number;
       reporting: { pollingUnitsTotal: number; pollingUnitsReported: number; percent: number };
       lastResultAt: string | null;
+      senatorialDistrictId: string | null;
+      senatorialDistrictName: string | null;
     }> = [];
 
     let wins = 0;
@@ -1069,6 +1076,8 @@ export class CollationBrowseService {
             : 0,
         reporting: this.reportingStats(cov.total, cov.reported),
         lastResultAt: cov.lastAt?.toISOString() ?? null,
+        senatorialDistrictId: lga.senatorialDistrictId ?? lga.senatorialDistrict?.id ?? null,
+        senatorialDistrictName: lga.senatorialDistrict?.name ?? null,
       });
     }
 
