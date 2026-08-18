@@ -1,9 +1,15 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { arithmeticVerification } from './ocr-verification';
-import { mergeVisionWithArithmetic, parseEc8aOcrText, parseNumberWords } from './ocr-ec8a-parse';
+import {
+  MIN_AUTO_FILL_CONFIDENCE,
+  mergeVisionWithArithmetic,
+  parseEc8aOcrText,
+  parseNumberWords,
+} from './ocr-ec8a-parse';
 
 const osunVisionText = readFileSync(join(__dirname, 'ocr-ec8a-osun.fixture.txt'), 'utf8');
+const ayedadeVisionText = readFileSync(join(__dirname, 'ocr-ec8a-ayedade.fixture.txt'), 'utf8');
 
 describe('EC8A Vision text parse', () => {
   const sample = `
@@ -29,6 +35,8 @@ describe('EC8A Vision text parse', () => {
     expect(extracted.fields.unusedBallotPapers).toBe(79);
     expect(extracted.partyResults.PDP).toBe(159);
     expect(extracted.partyResults.APC).toBe(40);
+    expect(extracted.partyResults.ADC).toBe(8);
+    expect(extracted.confidence).toBe(1);
   });
 
   it('marks empty text unreadable', () => {
@@ -118,6 +126,44 @@ describe('EC8A Vision text parse', () => {
     expect(extracted.partyResults.ZLP).toBe(3);
     expect(extracted.partyResults.ZLP).not.toBe(500);
     expect(extracted.partyResults.APC).not.toBe(7);
+  });
+
+  it('does not treat a serial sitting after a party code as that party’s votes', () => {
+    const trap = `
+      POLITICAL PARTY VOTES SCORED IN FIGURES IN WORDS
+      4 ADC 4
+      5 ADP 2 TWO
+    `;
+    const extracted = parseEc8aOcrText(trap, ['ADC', 'ADP']);
+    expect(extracted.partyResults.ADC).not.toBe(4);
+    expect(extracted.partyResults.ADP).toBe(2);
+  });
+
+  it('does not treat SN / LGA codes as votes on a boxed Osun EC8A', () => {
+    const extracted = parseEc8aOcrText(ayedadeVisionText, [
+      'AA',
+      'AAC',
+      'ADC',
+      'ADP',
+      'APC',
+      'APGA',
+      'NNPP',
+      'PDP',
+      'ZLP',
+    ]);
+    expect(extracted.unreadable).toBe(false);
+    expect(extracted.confidence).toBeGreaterThanOrEqual(MIN_AUTO_FILL_CONFIDENCE);
+    expect(extracted.fields.registeredVoters).toBe(315);
+    expect(extracted.fields.accreditedVoters).toBe(181);
+    expect(extracted.fields.unusedBallotPapers).toBe(134);
+    expect(extracted.fields.votesCast).toBe(172);
+    expect(extracted.fields.usedBallotPapers).toBe(181);
+    expect(extracted.partyResults.A).toBe(95);
+    expect(extracted.partyResults.ADC).toBe(0);
+    expect(extracted.partyResults.ADP).toBe(2);
+    expect(extracted.partyResults.APC).toBe(74);
+    expect(extracted.partyResults.ZLP).toBe(1);
+    expect(extracted.partyResults.AAC).toBe(0);
   });
 
   it('falls back to CHECK_PHOTO when Vision cannot read the form', () => {

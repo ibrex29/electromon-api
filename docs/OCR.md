@@ -18,7 +18,7 @@ If Vision is not configured, agents see `Google Cloud Vision is not configured` 
 | **Verify** | Agent submits the PU result | A background job OCRs the photo again and stores a chip: Match / Return / Check photo |
 
 Auto-fill does **not** submit the result. The agent must still review, edit if needed, save, and submit.
-
+ap
 ---
 
 ## Agent flow (web)
@@ -77,7 +77,10 @@ Campaign tracked-party codes are used as a last pass so extra parties still get 
 ### Confidence
 
 - `unreadable: true` if nothing useful was extracted (or Vision is off / timed out).
-- Confidence is `1` when EC8A identities hold on the extracted numbers; otherwise a fraction based on how many fields were found.
+- Confidence is `1` only when EC8A identities hold on the extracted numbers (party sum = valid votes, or used = spoiled + rejected + valid). Otherwise it is capped at `0.65`.
+- The agent form auto-fills only when confidence is **≥ 0.75**. A clear photo that still parses as serial numbers / LGA codes (party scores ≠ valid votes) is **not** written into Check figures — the agent must type them.
+
+Party table parsing prefers **IN WORDS** over the figures column, and ignores a figure that is the row’s serial number (e.g. SN `4` / ADC / `4` with words ZERO is 0 votes, not 4). Location codes (`03`, `29`, `016`) are not used as register/accredited totals.
 
 ---
 

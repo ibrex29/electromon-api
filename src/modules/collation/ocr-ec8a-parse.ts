@@ -126,7 +126,22 @@ const OCR_WORD_SPLITS: Record<string, string[]> = {
   fiftinine: ['fifty', 'nine'],
   fiftnine: ['fifty', 'nine'],
   fiftenine: ['fifty', 'nine'],
+  ninetyfive: ['ninety', 'five'],
+  seventyfour: ['seventy', 'four'],
+  seventyfive: ['seventy', 'five'],
+  fortyfive: ['forty', 'five'],
+  fourtyfive: ['forty', 'five'],
 };
+
+const LARGE_SUMMARY_FIELDS = new Set([
+  'registeredVoters',
+  'accreditedVoters',
+  'ballotPapersIssued',
+  'usedBallotPapers',
+]);
+
+/** Auto-fill the agent form only when identities hold or enough parties agree. */
+export const MIN_AUTO_FILL_CONFIDENCE = 0.75;
 
 const PARTY_CODE_STOP = new Set([
   'AND',
@@ -251,12 +266,17 @@ function isPartyCode(token: string): boolean {
 }
 
 function looksLikeLocationCode(text: string, index: number, raw: string): boolean {
-  const before = text.slice(Math.max(0, index - 48), index);
-  const after = text.slice(index + raw.length, index + raw.length + 80);
-  if (/\bcode\b[\s.]*$/i.test(before)) return true;
+  const digits = raw.replace(/,/g, '');
+  const before = text.slice(Math.max(0, index - 40), index);
+  const after = text.slice(index + digits.length, index + digits.length + 28);
+  if (digits.length <= 3 && /\bcode\b/i.test(before.slice(-20) + after.slice(0, 12))) return true;
   if (/s\/n\s*$/i.test(before)) return true;
-  if (/^\s*(local government|state\.|registration area|polling unit)/i.test(after)) return true;
+  if (/^\s*(local government|state\.)/i.test(after)) return true;
   return false;
+}
+
+function tooSmallForField(field: string, value: number): boolean {
+  return LARGE_SUMMARY_FIELDS.has(field) && value < 10;
 }
 
 function collectFormNumbers(text: string): FoundNumber[] {
@@ -321,11 +341,17 @@ function assignClusteredFields(text: string): Record<string, number | null> {
       numbers[numIdx]!.index < before &&
       cluster.length < group.length
     ) {
-      cluster.push(numbers[numIdx]!.value);
+      const value = numbers[numIdx]!.value;
+      const field = group[cluster.length]?.field;
       numIdx += 1;
+      if (field && tooSmallForField(field, value)) continue;
+      cluster.push(value);
     }
     for (let k = 0; k < group.length; k += 1) {
-      fields[group[k]!.field] = cluster[k] ?? null;
+      const value = cluster[k];
+      if (value == null) continue;
+      if (tooSmallForField(group[k]!.field, value)) continue;
+      fields[group[k]!.field] = value;
     }
     i = j;
   }
@@ -336,6 +362,15 @@ function firstUsefulNumberAfter(text: string, from: number, window = 120): numbe
   const slice = text.slice(from, from + window);
   const numbers = collectFormNumbers(slice);
   return numbers[0]?.value ?? null;
+}
+
+function nextSerialLine(block: string[], from: number, serial: number): boolean {
+  for (let i = from; i < Math.min(block.length, from + 4); i += 1) {
+    const line = block[i] ?? '';
+    if (/^(0|[1-9]\d?)$/.test(line) && Number(line) === serial + 1) return true;
+    if (isPartyCode(line)) continue;
+  }
+  return false;
 }
 
 function extractPartyTable(text: string): { codes: string[]; figures: Array<number | null> } {
@@ -351,6 +386,7 @@ function extractPartyTable(text: string): { codes: string[]; figures: Array<numb
     const line = block[i] ?? '';
     if (!/^(0|[1-9]\d?)$/.test(line)) continue;
     const serial = Number(line);
+    if (serial < 1 || serial > 30) continue;
     const code = block[i + 1] ?? '';
     if (!isPartyCode(code)) continue;
     codes.push(code.toUpperCase());
@@ -360,30 +396,23 @@ function extractPartyTable(text: string): { codes: string[]; figures: Array<numb
       continue;
     }
     const figure = Number(maybeFigure);
-    const nextSerial = serial + 1;
-    figures.push(figure === nextSerial ? null : figure);
+    const followedByNextSerial = nextSerialLine(block, i + 3, serial);
+    // SN 4 / ADC / 4 / 5  → the "4" is the serial, not four votes.
+    if (figure === serial + 1 || (figure === serial && followedByNextSerial) || figure === serial) {
+      figures.push(null);
+      continue;
+    }
+    figures.push(figure);
   }
   return { codes, figures };
 }
 
-function wordColumnStart(text: string): number {
-  const afterTable = [
-    text.search(/name\s*\/\s*signature/i),
-    text.search(/polling\s+agent/i),
-    text.search(/total\s+number\s+of\s+used\s+ballot/i),
-  ].filter((index) => index >= 0);
-  if (afterTable.length > 0) return Math.max(...afterTable);
-  return text.search(/in\s+words/i);
-}
+function extractWordScoresFrom(slice: string, expectedCount: number): number[] {
+  let text = slice;
+  const totalAt = text.search(/\btotal\s+valid\s+votes\b/i);
+  if (totalAt > 40) text = text.slice(0, totalAt);
 
-function extractWordScores(text: string, expectedCount: number): number[] {
-  const wordsAt = wordColumnStart(text);
-  if (wordsAt < 0) return [];
-  let slice = text.slice(wordsAt);
-  const totalAt = slice.search(/\btotal\s+valid\s+votes\b/i);
-  if (totalAt > 0) slice = slice.slice(0, totalAt);
-
-  const tokens = tokenizeOcr(slice);
+  const tokens = tokenizeOcr(text);
   const scores: number[] = [];
   let i = 0;
   while (i < tokens.length && scores.length < expectedCount + 2) {
@@ -410,12 +439,39 @@ function extractWordScores(text: string, expectedCount: number): number[] {
   return scores.slice(0, expectedCount || scores.length);
 }
 
+function extractWordScores(text: string, expectedCount: number): number[] {
+  const windows: string[] = [];
+  const inWords = text.search(/in\s+words/i);
+  if (inWords >= 0) windows.push(text.slice(inWords));
+  const afterTable = [
+    text.search(/name\s*\/\s*signature/i),
+    text.search(/polling\s+agent/i),
+    text.search(/total\s+number\s+of\s+used\s+ballot/i),
+  ].filter((index) => index >= 0);
+  if (afterTable.length > 0) windows.push(text.slice(Math.max(...afterTable)));
+  if (windows.length === 0) return [];
+
+  const expected = expectedCount || 18;
+  const candidates = windows.map((slice) => extractWordScoresFrom(slice, expected));
+  candidates.sort((a, b) => {
+    const aFit = Math.abs(a.length - expected);
+    const bFit = Math.abs(b.length - expected);
+    if (aFit !== bFit) return aFit - bFit;
+    const aZeros = a.filter((n) => n === 0).length;
+    const bZeros = b.filter((n) => n === 0).length;
+    return bZeros - aZeros;
+  });
+  return candidates[0] ?? [];
+}
+
 function extractPartiesFromWordsAndTable(text: string): Record<string, number> {
   const table = extractPartyTable(text);
   const wordScores = extractWordScores(text, table.codes.length || 18);
   const partyResults: Record<string, number> = {};
+  const enoughWords =
+    table.codes.length > 0 && wordScores.length >= Math.min(8, table.codes.length);
 
-  if (table.codes.length > 0 && wordScores.length >= Math.min(10, table.codes.length)) {
+  if (enoughWords) {
     for (let i = 0; i < table.codes.length; i += 1) {
       const fromWords = wordScores[i];
       const fromFigure = table.figures[i];
@@ -436,45 +492,89 @@ function extractPartiesFromWordsAndTable(text: string): Record<string, number> {
   return partyResults;
 }
 
+function looksLikeNextSerial(text: string, afterIndex: number, value: number): boolean {
+  if (value < 1 || value > 30) return false;
+  const after = text.slice(afterIndex, afterIndex + 48);
+  // SN 4 / ADC / 4 / 5 ADP — the "4" after ADC is the serial, not four votes.
+  return /^\s*\d{1,2}\s+[A-Z]{1,6}\b/i.test(after);
+}
+
 function extractPartiesByCode(text: string, partyCodes: string[]): Record<string, number> {
   const partyResults: Record<string, number> = {};
   const codes = [...new Set(partyCodes.map((code) => code.toUpperCase()))].filter(
     (code) => code.length >= 2 && code.length <= 6,
   );
   for (const code of codes) {
-    const pattern = new RegExp(`\\b${code}\\b[^0-9]{0,40}${NUMBER_RE.source}`, 'i');
+    const pattern = new RegExp(`\\b${code}\\b[^0-9]{0,24}${NUMBER_RE.source}`, 'i');
     const match = pattern.exec(text);
     if (!match) continue;
     const value = Number(match[1]!.replace(/,/g, ''));
-    if (Number.isFinite(value)) partyResults[code] = value;
+    if (!Number.isFinite(value)) continue;
+    if (looksLikeNextSerial(text, match.index + match[0].length, value)) continue;
+    partyResults[code] = value;
   }
   return partyResults;
 }
 
-export function parseEc8aOcrText(text: string, partyCodes: string[] = []): VisionExtract {
-  const fields = assignClusteredFields(text);
-
+function applyPatternFields(text: string, fields: Record<string, number | null>) {
+  const partyTableAt = text.search(/political\s+party|votes\s+scored/i);
   for (const spec of FIELD_PATTERNS) {
-    if (fields[spec.field] != null) continue;
+    const current = fields[spec.field];
+    if (current != null && !tooSmallForField(spec.field, current)) continue;
     for (const pattern of spec.patterns) {
       const match = pattern.exec(text);
       if (!match) continue;
-      const found = firstUsefulNumberAfter(text, match.index + match[0].length);
-      if (found != null) {
-        fields[spec.field] = found;
-        break;
-      }
+      if (partyTableAt >= 0 && match.index > partyTableAt) continue;
+      const found = firstUsefulNumberAfter(text, match.index + match[0].length, 80);
+      if (found == null) continue;
+      if (tooSmallForField(spec.field, found)) continue;
+      fields[spec.field] = found;
+      break;
+    }
+  }
+}
+
+function reconcileExtract(fields: Record<string, number | null>, partyResults: Record<string, number>) {
+  const partySum = partyVotesSum(partyResults);
+  if (partySum != null && partySum >= 10) {
+    const valid = fields.votesCast;
+    if (valid == null || valid < 10 || valid === partySum) {
+      fields.votesCast = partySum;
+    }
+  }
+  const spoiled = fields.spoiledBallotPapers ?? 0;
+  const rejected = fields.invalidVotes ?? 0;
+  const valid = fields.votesCast;
+  if (valid != null && fields.usedBallotPapers == null) {
+    fields.usedBallotPapers = spoiled + rejected + valid;
+  }
+  if (fields.accreditedVoters != null && fields.usedBallotPapers == null) {
+    fields.usedBallotPapers = fields.accreditedVoters;
+  }
+  if (
+    fields.ballotPapersIssued == null &&
+    fields.usedBallotPapers != null &&
+    fields.unusedBallotPapers != null
+  ) {
+    fields.ballotPapersIssued = fields.usedBallotPapers + fields.unusedBallotPapers;
+  }
+}
+
+export function parseEc8aOcrText(text: string, partyCodes: string[] = []): VisionExtract {
+  const fields = assignClusteredFields(text);
+  applyPatternFields(text, fields);
+
+  const table = extractPartyTable(text);
+  const fromTable = extractPartiesFromWordsAndTable(text);
+  const partyResults = { ...fromTable };
+  if (table.codes.length < 8) {
+    const fromCodes = extractPartiesByCode(text, partyCodes);
+    for (const [code, votes] of Object.entries(fromCodes)) {
+      if (partyResults[code] == null) partyResults[code] = votes;
     }
   }
 
-  const fromTable = extractPartiesFromWordsAndTable(text);
-  const fromCodes = extractPartiesByCode(text, partyCodes);
-  const tableCodes = new Set(extractPartyTable(text).codes);
-  const partyResults = { ...fromTable };
-  for (const [code, votes] of Object.entries(fromCodes)) {
-    if (tableCodes.has(code)) continue;
-    if (partyResults[code] == null) partyResults[code] = votes;
-  }
+  reconcileExtract(fields, partyResults);
 
   const extractedCount =
     Object.values(fields).filter((value) => value != null).length + Object.keys(partyResults).length;
@@ -487,11 +587,14 @@ export function parseEc8aOcrText(text: string, partyCodes: string[] = []): Visio
       fields.votesCast != null &&
       fields.usedBallotPapers === fields.spoiledBallotPapers + fields.invalidVotes + fields.votesCast);
 
+  const confidence =
+    extractedCount === 0 ? null : identitiesHold ? 1 : Math.min(0.65, extractedCount / 16);
+
   return {
     fields,
     partyResults,
-    confidence: extractedCount === 0 ? null : identitiesHold ? 1 : Math.min(1, extractedCount / 12),
-    unreadable: extractedCount === 0,
+    confidence,
+    unreadable: extractedCount === 0 || (confidence != null && confidence < 0.45),
   };
 }
 
