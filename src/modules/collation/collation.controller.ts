@@ -1,6 +1,9 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
@@ -16,11 +19,22 @@ import {
 } from '@electromon/shared';
 import { CollationService } from './collation.service';
 import { CollationBrowseService } from './collation-browse.service';
-import { CreateCollationResultDto, RejectCollationResultDto, AttachEc8aPhotoDto, ApproveCollationResultDto } from './dto/collation.dto';
+import {
+  CreateCollationResultDto,
+  RejectCollationResultDto,
+  AttachEc8aPhotoDto,
+  ApproveCollationResultDto,
+  ScanEc8aDto,
+  ScanEc8aResponseDto,
+  ScanEc8aFileResponseDto,
+} from './dto/collation.dto';
 import { Roles } from '../../common/decorators/auth.decorators';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ApiErrorResponseDto } from '../../common/dto/api-response.dto';
 import { SWAGGER_BEARER_AUTH } from '../../common/swagger/swagger.config';
+import { UploadsService } from '../uploads/uploads.service';
+import { memoryStorage } from 'multer';
+import type { Request } from 'express';
 
 @ApiTags('collation')
 @ApiBearerAuth(SWAGGER_BEARER_AUTH)
@@ -29,6 +43,7 @@ export class CollationController {
   constructor(
     private collationService: CollationService,
     private browseService: CollationBrowseService,
+    private uploadsService: UploadsService,
   ) {}
 
   @Get('context')
@@ -315,6 +330,62 @@ export class CollationController {
     @Body() dto: AttachEc8aPhotoDto,
   ) {
     return this.collationService.attachEc8aPhoto(user, id, dto.photoUrl);
+  }
+
+  @Post('ec8a/scan')
+  @Roles(...COLLATION_ROLES)
+  @ApiOperation({
+    summary: 'OCR an already-uploaded EC8A photo (JSON photoUrl)',
+    description:
+      'For web or when you already have `/uploads/{id}`. Mobile apps should prefer `POST /collation/ec8a/scan-file`.',
+  })
+  @ApiOkResponse({ type: ScanEc8aResponseDto })
+  scanEc8a(@CurrentUser() user: JwtPayload, @Body() dto: ScanEc8aDto) {
+    return this.collationService.scanEc8aPhoto(user, dto.photoUrl);
+  }
+
+  @Post('ec8a/scan-file')
+  @Roles(...COLLATION_ROLES)
+  @ApiTags('mobile')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: { file: { type: 'string', format: 'binary' } },
+    },
+  })
+  @ApiOperation({
+    summary: 'Mobile: upload EC8A photo and return OCR figures in one call',
+    description: [
+      'Send the camera JPEG as multipart field `file`.',
+      'Returns `photoUrl` plus EC8A `fields` and `partyResults` to pre-fill the agent form.',
+      'Agent must still review/edit, then `POST /collation/results` and `PATCH /collation/results/:id/submit`.',
+      'Wait up to ~25s. JPEG/PNG, max 5 MB. PDFs are not OCR’d.',
+    ].join('\n\n'),
+  })
+  @ApiOkResponse({ type: ScanEc8aFileResponseDto })
+  async scanEc8aFile(
+    @CurrentUser() user: JwtPayload,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: Request,
+  ) {
+    const uploaded = this.uploadsService.saveFile(file, req);
+    const scan = await this.collationService.scanEc8aPhoto(user, uploaded.url);
+    return {
+      ...scan,
+      photoUrl: uploaded.url,
+      url: uploaded.url,
+      filename: uploaded.filename,
+      mimeType: uploaded.mimeType,
+      size: uploaded.size,
+    };
   }
 
   @Patch('results/:id/approve')

@@ -60,7 +60,7 @@ export class CreateCollationResultDto {
   usedBallotPapers?: number;
 
   @ApiPropertyOptional({
-    example: { APC: 40, A: 159, ADC: 4 },
+    example: { APC: 159, PDP: 40, ADC: 4 },
     description: 'Party vote totals keyed by party code',
   })
   @IsOptional()
@@ -82,6 +82,58 @@ export class AttachEc8aPhotoDto {
   @IsString()
   @MinLength(8)
   photoUrl: string;
+}
+
+export class ScanEc8aDto {
+  @ApiProperty({ example: 'http://localhost:3001/uploads/abc.jpg' })
+  @IsString()
+  @MinLength(8)
+  photoUrl: string;
+}
+
+export class ScanEc8aResponseDto {
+  @ApiProperty({
+    example: {
+      registeredVoters: 289,
+      accreditedVoters: 210,
+      ballotPapersIssued: 289,
+      unusedBallotPapers: 79,
+      spoiledBallotPapers: 0,
+      invalidVotes: 3,
+      votesCast: 207,
+      usedBallotPapers: 210,
+    },
+  })
+  fields: Record<string, number | null>;
+
+  @ApiProperty({ example: { APC: 159, PDP: 40, ADC: 4 } })
+  partyResults: Record<string, number>;
+
+  @ApiPropertyOptional({ example: 1, nullable: true })
+  confidence: number | null;
+
+  @ApiProperty({ example: false })
+  unreadable: boolean;
+
+  @ApiPropertyOptional({ example: null, nullable: true })
+  error?: string;
+}
+
+export class ScanEc8aFileResponseDto extends ScanEc8aResponseDto {
+  @ApiProperty({ example: 'http://192.168.1.10:3001/uploads/abc.jpg' })
+  photoUrl: string;
+
+  @ApiProperty({ example: 'http://192.168.1.10:3001/uploads/abc.jpg' })
+  url: string;
+
+  @ApiProperty({ example: 'abc.jpg' })
+  filename: string;
+
+  @ApiProperty({ example: 'image/jpeg' })
+  mimeType: string;
+
+  @ApiProperty({ example: 183879 })
+  size: number;
 }
 
 export class RejectCollationResultDto {

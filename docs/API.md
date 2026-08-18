@@ -26,6 +26,60 @@ Authorization: Bearer <accessToken>
 
 ---
 
+## Mobile PU agent (EC8A)
+
+Dan-Modi/Jigawa base URL: `http://localhost:3001/api/v1`  
+On a phone on the same Wi-Fi, use the LAN URL logged at API boot (e.g. `http://192.168.x.x:3001/api/v1`).  
+Swagger: http://localhost:3001/docs · OpenAPI: http://localhost:3001/docs/json  
+Demo password: `ChangeMe123!` — PU agent `+2348000000002`
+
+### Flow
+
+1. `POST /auth/login`
+2. `GET /collation/dashboard`
+3. `POST /collation/ec8a/scan-file` — multipart field **`file`** (JPEG/PNG, max 5 MB). Wait up to ~25s.
+4. Show `fields` + `partyResults`; agent edits if needed
+5. `POST /collation/results` — save draft, include `ec8aPhotoUrls: [photoUrl]`
+6. `PATCH /collation/results/:id/submit`
+
+### POST /collation/ec8a/scan-file
+
+**Auth:** Bearer (role `POLLING_AGENT` or other collation roles)
+
+```bash
+curl -X POST http://localhost:3001/api/v1/collation/ec8a/scan-file \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@ec8a.jpg"
+```
+
+**Response (200):**
+```json
+{
+  "photoUrl": "http://192.168.1.10:3001/uploads/….jpg",
+  "url": "http://192.168.1.10:3001/uploads/….jpg",
+  "filename": "….jpg",
+  "mimeType": "image/jpeg",
+  "size": 183879,
+  "fields": {
+    "registeredVoters": 289,
+    "accreditedVoters": 210,
+    "ballotPapersIssued": 289,
+    "unusedBallotPapers": 79,
+    "spoiledBallotPapers": 0,
+    "invalidVotes": 3,
+    "votesCast": 207,
+    "usedBallotPapers": 210
+  },
+  "partyResults": { "APC": 159, "PDP": 40 },
+  "confidence": 1,
+  "unreadable": false
+}
+```
+
+If `unreadable` is true, keep `photoUrl` and let the agent type figures. Then `POST /collation/ec8a/scan` with `{ "photoUrl" }` if you already uploaded via `POST /uploads`.
+
+---
+
 ## Health
 
 | Method | Path | Auth | Description |

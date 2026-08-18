@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Req,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -15,6 +16,7 @@ import {
 } from '@nestjs/swagger';
 import { CampaignRole } from '@electromon/shared';
 import { memoryStorage } from 'multer';
+import type { Request } from 'express';
 import { Roles } from '../../common/decorators/auth.decorators';
 import { SWAGGER_BEARER_AUTH } from '../../common/swagger/swagger.config';
 import { UploadsService } from './uploads.service';
@@ -48,7 +50,7 @@ export class UploadsController {
   })
   @ApiOperation({ summary: 'Upload EC8A photo or supporting document' })
   @ApiCreatedResponse({ description: 'Uploaded file metadata with public URL' })
-  upload(@UploadedFile() file: Express.Multer.File) {
-    return this.uploadsService.saveFile(file);
+  upload(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
+    return this.uploadsService.saveFile(file, req);
   }
 }

@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import {
   CampaignRole,
   CollationLevel,
+  CollationResultStatus,
   FieldReportType,
   JwtPayload,
   ScopeType,
@@ -830,7 +831,10 @@ export class CollationBrowseService {
           const result = resultMap.get(pu.id);
           const parties = parsePartyTotals(result?.partyResults, partyConfig.partyColumns);
           const incidents = incidentStats.byPu.get(pu.id) ?? emptyIncidentBucket();
-          const hasResult = Boolean(result);
+          const hasResult =
+            result?.status === CollationResultStatus.SUBMITTED ||
+            result?.status === CollationResultStatus.APPROVED ||
+            result?.status === CollationResultStatus.REJECTED;
           return {
             ...this.mapOutcomeRow({
               id: pu.id,
@@ -1252,6 +1256,13 @@ export class CollationBrowseService {
         campaignId,
         level: CollationLevel.POLLING_UNIT,
         scopeId: { in: pus.map((p) => p.id) },
+        status: {
+          in: [
+            CollationResultStatus.SUBMITTED,
+            CollationResultStatus.APPROVED,
+            CollationResultStatus.REJECTED,
+          ],
+        },
       },
       select: {
         scopeId: true,

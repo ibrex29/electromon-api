@@ -1,10 +1,11 @@
-import type { PrismaClient } from '../src/generated/client';
+import type { Prisma, PrismaClient } from '../src/generated/client';
 import {
   ScopeType,
   CollationLevel,
   CollationResultStatus,
   CollationActionType,
 } from '../src/generated/client';
+import { arithmeticVerification } from '../../src/modules/collation/ocr-verification';
 
 type PartyTotals = Record<string, number>;
 type PuStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
@@ -208,6 +209,13 @@ export const LGA_OUTCOME_OVERRIDES: Record<string, SeedOutcome | 'PENDING'> = {
   Kirikasamma: 'WIN',
 };
 
+export type SeedFigureProfile =
+  | 'MATCH'
+  | 'PARTY_MISMATCH'
+  | 'USED_MISMATCH'
+  | 'ACCREDITED_OVER'
+  | 'INCOMPLETE';
+
 interface SeedPuResultInput {
   puId: string;
   index: number;
@@ -220,6 +228,83 @@ interface SeedPuResultInput {
   rejectionReason?: string;
   includeEc8a?: boolean;
   hoursAgo?: number;
+  figureProfile?: SeedFigureProfile;
+}
+
+function partySum(partyResults: PartyTotals): number {
+  return Object.values(partyResults).reduce((sum, n) => sum + (n ?? 0), 0);
+}
+
+/** Full EC8A identities, then optional mutations for ward/LGA verification demos. */
+export function buildSeedEc8aSheet(partyResults: PartyTotals, profile: SeedFigureProfile = 'MATCH') {
+  const valid = partySum(partyResults);
+  const spoiled = 1;
+  const rejected = 3;
+  const used = spoiled + rejected + valid;
+  const unused = 72;
+  const issued = used + unused;
+  const registered = issued + 20;
+  const accredited = used;
+
+  const match = {
+    partyResults,
+    votesCast: valid,
+    registeredVoters: registered,
+    accreditedVoters: accredited,
+    ballotPapersIssued: issued,
+    unusedBallotPapers: unused,
+    spoiledBallotPapers: spoiled,
+    invalidVotes: rejected,
+    usedBallotPapers: used,
+  };
+
+  switch (profile) {
+    case 'PARTY_MISMATCH':
+      return { ...match, votesCast: Math.max(0, valid - 17) };
+    case 'USED_MISMATCH':
+      return { ...match, usedBallotPapers: Math.max(0, used - 11) };
+    case 'ACCREDITED_OVER':
+      return { ...match, accreditedVoters: registered + 25 };
+    case 'INCOMPLETE':
+      return {
+        partyResults,
+        votesCast: valid,
+        registeredVoters: null as number | null,
+        accreditedVoters: null as number | null,
+        ballotPapersIssued: null as number | null,
+        unusedBallotPapers: null as number | null,
+        spoiledBallotPapers: null as number | null,
+        invalidVotes: null as number | null,
+        usedBallotPapers: null as number | null,
+      };
+    default:
+      return match;
+  }
+}
+
+function atafiVerificationScenario(
+  puCode: string,
+  puPos: number,
+): { status: PuStatus; figureProfile: SeedFigureProfile; includeEc8a: boolean } {
+  if (puCode === '17-13-01-001' || puPos === 0) {
+    return { status: 'SUBMITTED', figureProfile: 'MATCH', includeEc8a: true };
+  }
+  if (puCode === '17-13-01-002' || puPos === 1) {
+    return { status: 'SUBMITTED', figureProfile: 'PARTY_MISMATCH', includeEc8a: true };
+  }
+  if (puCode === '17-13-01-003' || puPos === 2) {
+    return { status: 'DRAFT', figureProfile: 'INCOMPLETE', includeEc8a: false };
+  }
+  if (puCode === '17-13-01-004' || puPos === 3) {
+    return { status: 'SUBMITTED', figureProfile: 'USED_MISMATCH', includeEc8a: true };
+  }
+  if (puCode === '17-13-01-005' || puPos === 4) {
+    return { status: 'SUBMITTED', figureProfile: 'ACCREDITED_OVER', includeEc8a: true };
+  }
+  if (puPos === 5) {
+    return { status: 'REJECTED', figureProfile: 'PARTY_MISMATCH', includeEc8a: true };
+  }
+  return { status: 'APPROVED', figureProfile: 'MATCH', includeEc8a: true };
 }
 
 interface ActorIds {
@@ -275,9 +360,8 @@ export async function seedPollingUnitResult(
   const partyResults =
     input.partyResults ??
     generateOutcomePartyResults(input.outcome ?? pickSeedOutcome(input.index), input.index, input.partyCodes);
-  const votesCast = Object.values(partyResults).reduce((sum, n) => sum + n, 0);
-  const registeredVoters = votesCast + 120 + (input.index % 80);
-  const accreditedVoters = votesCast + (input.index % 12);
+  const figureProfile = input.figureProfile ?? 'MATCH';
+  const sheet = buildSeedEc8aSheet(partyResults, figureProfile);
   const hoursAgo = input.hoursAgo ?? 6 + (input.index % 10);
   const submittedAt =
     input.status === 'DRAFT' ? null : new Date(Date.now() - hoursAgo * 60 * 60 * 1000);
@@ -285,12 +369,16 @@ export async function seedPollingUnitResult(
     input.status === 'APPROVED' || input.status === 'REJECTED'
       ? new Date(Date.now() - Math.max(1, hoursAgo - 2) * 60 * 60 * 1000)
       : null;
+  const includeEc8a = input.includeEc8a !== false && input.status !== 'DRAFT' && figureProfile !== 'INCOMPLETE';
+  const ec8aPhotoUrls = includeEc8a
+    ? [`http://localhost:3001/uploads/seed-ec8a-${input.puId.slice(-8)}.png`]
+    : [];
+  const verification = arithmeticVerification({ ...sheet, ec8aPhotoUrls });
 
   const payload = {
-    partyResults,
-    votesCast,
-    registeredVoters,
-    accreditedVoters,
+    ...sheet,
+    ocrVerification: verification as unknown as Prisma.InputJsonValue,
+    ocrVerifiedAt: new Date(verification.verifiedAt),
     status: input.status as CollationResultStatus,
     submittedById: input.status === 'DRAFT' ? null : (input.submittedById ?? null),
     submittedAt,
@@ -302,10 +390,7 @@ export async function seedPollingUnitResult(
     rejectionReason: input.status === 'REJECTED' ? (input.rejectionReason ?? 'Returned for correction') : null,
     approvalComment:
       input.status === 'APPROVED' ? 'Verified against EC8A — figures match' : null,
-    ec8aPhotoUrls:
-      input.includeEc8a !== false && input.status !== 'DRAFT'
-        ? [`http://localhost:3001/uploads/seed-ec8a-${input.puId.slice(-8)}.png`]
-        : [],
+    ec8aPhotoUrls,
   };
 
   const result = await prisma.collationResult.upsert({
@@ -342,6 +427,7 @@ export async function seedWardRollupFromPus(
     rejectionReason?: string;
     /** Only sum APPROVED child PUs (matches production rollup) */
     approvedOnly?: boolean;
+    flaggedPollingUnitIds?: string[];
   } = {},
 ) {
   const status = options.status ?? 'APPROVED';
@@ -399,6 +485,8 @@ export async function seedWardRollupFromPus(
         ? (options.rejectionReason ?? 'Returned to ward for correction')
         : null,
     approvalComment: status === 'APPROVED' ? 'Ward totals verified at LGA' : null,
+    flaggedPollingUnitIds:
+      status === 'REJECTED' ? (options.flaggedPollingUnitIds ?? []) : [],
   };
 
   const result = await prisma.collationResult.upsert({
@@ -523,6 +611,7 @@ export async function seedHadejiaCollationResults(
   let seededPus = 0;
   let incompleteWardId: string | null = null;
   let atafiWardId: string | null = null;
+  const atafiFlaggedPuIds: string[] = [];
 
   for (const [wardIndex, ward] of wards.entries()) {
     const isAtafi = ward.name.toUpperCase().includes('ATAFI');
@@ -541,16 +630,19 @@ export async function seedHadejiaCollationResults(
         : pickSeedOutcome(wardIndex + 3);
 
     for (const [puPos, pu] of ward.pollingUnits.entries()) {
-      const status = resolvePuStatus({
-        isAtafi,
-        isIncompleteWard: ward.id === incompleteWardId,
-        isDemoPu:
-          isAtafi &&
-          (pu.code === '17-13-01-001' || puPos === 0),
-        puPos,
-        wardPuCount: ward.pollingUnits.length,
-        puIndex,
-      });
+      const atafi = isAtafi ? atafiVerificationScenario(pu.code, puPos) : null;
+      const status =
+        atafi?.status ??
+        resolvePuStatus({
+          isAtafi: false,
+          isIncompleteWard: ward.id === incompleteWardId,
+          isDemoPu: false,
+          puPos,
+          wardPuCount: ward.pollingUnits.length,
+          puIndex,
+        });
+      const figureProfile = atafi?.figureProfile ?? 'MATCH';
+      const includeEc8a = atafi?.includeEc8a ?? status !== 'DRAFT';
 
       // Within a ward, mostly follow wardOutcome; sprinkle opposite pockets
       let puOutcome: SeedOutcome = wardOutcome;
@@ -569,15 +661,24 @@ export async function seedHadejiaCollationResults(
         partyCodes,
         status,
         outcome: puOutcome,
+        figureProfile,
         submittedById: puOfficerId,
         approvedById: wardOfficerId,
         rejectionReason:
           status === 'REJECTED'
             ? 'EC8A total does not match entered party votes — please recheck'
             : undefined,
-        includeEc8a: status !== 'DRAFT',
+        includeEc8a,
         hoursAgo: 4 + (puPos % 12),
       });
+
+      if (
+        isAtafi &&
+        status === 'SUBMITTED' &&
+        (figureProfile === 'PARTY_MISMATCH' || figureProfile === 'USED_MISMATCH')
+      ) {
+        atafiFlaggedPuIds.push(pu.id);
+      }
 
       if (puOfficerId && status !== 'DRAFT') {
         await writeSeedActionLog(prisma, {
@@ -646,6 +747,7 @@ export async function seedHadejiaCollationResults(
       submittedById: wardOfficerId,
       approvedById: lgaOfficerId,
       rejectionReason,
+      flaggedPollingUnitIds: isAtafi ? atafiFlaggedPuIds : undefined,
     });
 
     if (wardRollup && wardOfficerId) {
@@ -889,6 +991,7 @@ export async function seedCompetitiveLgaTrees(
           partyCodes,
           status,
           outcome: puOutcome,
+          figureProfile: puPos % 11 === 0 ? 'PARTY_MISMATCH' : 'MATCH',
           submittedById: actors.puOfficerId,
           approvedById: actors.wardOfficerId,
           includeEc8a: true,

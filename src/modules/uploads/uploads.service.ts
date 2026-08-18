@@ -16,7 +16,41 @@ export class UploadsService {
     }
   }
 
-  saveFile(file: Express.Multer.File) {
+  publicBaseUrl(req?: {
+    protocol?: string;
+    get?: (name: string) => string | undefined;
+    headers?: Record<string, unknown>;
+  }) {
+    const configured = process.env.API_PUBLIC_URL?.replace(/\/$/, '');
+    if (configured) return configured;
+    if (!req) {
+      return (process.env.API_URL ?? `http://localhost:${process.env.API_PORT ?? 3001}`).replace(
+        /\/$/,
+        '',
+      );
+    }
+    const host = req.get?.('host');
+    if (host) {
+      const forwarded = req.headers?.['x-forwarded-proto'];
+      const proto = String(
+        (Array.isArray(forwarded) ? forwarded[0] : forwarded) || req.protocol || 'http',
+      ).split(',')[0];
+      return `${proto}://${host}`;
+    }
+    return (process.env.API_URL ?? `http://localhost:${process.env.API_PORT ?? 3001}`).replace(
+      /\/$/,
+      '',
+    );
+  }
+
+  saveFile(
+    file: Express.Multer.File,
+    req?: {
+      protocol?: string;
+      get?: (name: string) => string | undefined;
+      headers?: Record<string, unknown>;
+    },
+  ) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -33,7 +67,7 @@ export class UploadsService {
     const filename = `${randomUUID()}${ext}`;
     writeFileSync(join(this.uploadDir, filename), file.buffer);
 
-    const baseUrl = process.env.API_PUBLIC_URL ?? `http://localhost:${process.env.API_PORT ?? 3001}`;
+    const baseUrl = this.publicBaseUrl(req);
     return {
       filename,
       url: `${baseUrl}/uploads/${filename}`,

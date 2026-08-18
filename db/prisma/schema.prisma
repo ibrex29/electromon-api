@@ -624,6 +624,9 @@ model CollationResult {
   rejectionReason  String?
   /// When LGA returns a ward, optional PU ids the LGA flagged for ward follow-up
   flaggedPollingUnitIds String[] @default([])
+  /// Arithmetic (and later OCR) recommendation for ward/LGA review. Never auto-approves.
+  ocrVerification  Json?
+  ocrVerifiedAt    DateTime?
   parentResultId   String?
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt

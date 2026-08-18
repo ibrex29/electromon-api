@@ -14,7 +14,9 @@ import {
   ScopeType,
   getParentLevel,
   getCollationLevelForRole,
+  getPartyCodes,
   isCampaignAdminRole,
+  normalizeTrackedParties,
 } from '@electromon/shared';
 import { Prisma } from '@electromon/db';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -24,6 +26,17 @@ import {
   NOTIFICATION_DISPATCH_EVENT,
   NotificationDispatchPayload,
 } from '../notifications/notification.events';
+import {
+  countPuVerifications,
+  emptyPuVerificationCounts,
+  ocrVerificationWrite,
+  resolveOcrVerification,
+  verificationSortRank,
+  type CollationFigures,
+} from './ocr-verification';
+import { OcrQueueService } from './ocr-queue.service';
+import { GoogleVisionService } from './google-vision.service';
+import type { VisionExtract } from './ocr-ec8a-parse';
 
 const EDITABLE_STATUSES = new Set<CollationResultStatus>([
   CollationResultStatus.DRAFT,
@@ -36,6 +49,8 @@ export class CollationService {
     private prisma: PrismaService,
     private scopeResolver: ScopeResolverService,
     private eventEmitter: EventEmitter2,
+    private ocrQueue: OcrQueueService,
+    private vision: GoogleVisionService,
   ) {}
 
   async getDashboard(user: JwtPayload) {
@@ -238,6 +253,8 @@ export class CollationService {
       invalidVotes: result?.invalidVotes ?? null,
       usedBallotPapers: result?.usedBallotPapers ?? null,
       partyResults: result?.partyResults ?? null,
+      ocrVerification: result ? resolveOcrVerification(result) : null,
+      ocrVerifiedAt: result?.ocrVerifiedAt ?? null,
       rejectionReason: result?.rejectionReason ?? null,
       submittedAt: result?.submittedAt ?? null,
       ec8aPhotoUrls: result?.ec8aPhotoUrls ?? [],
@@ -433,7 +450,7 @@ export class CollationService {
     }
 
     const flaggedIds = wardResult?.flaggedPollingUnitIds ?? [];
-    // Prefer LGA-flagged, then actionable statuses
+    // Prefer LGA-flagged, then figure mismatches, then actionable statuses
     const flaggedSet = new Set(flaggedIds);
     const statusOrder: Record<string, number> = {
       SUBMITTED: 0,
@@ -446,6 +463,10 @@ export class CollationService {
       const aFlagged = flaggedSet.has(a.pollingUnit.id) ? 0 : 1;
       const bFlagged = flaggedSet.has(b.pollingUnit.id) ? 0 : 1;
       if (aFlagged !== bFlagged) return aFlagged - bFlagged;
+      const verifyDiff =
+        verificationSortRank(resolveOcrVerification(a.result ?? {})) -
+        verificationSortRank(resolveOcrVerification(b.result ?? {}));
+      if (verifyDiff !== 0) return verifyDiff;
       const orderDiff = (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9);
       if (orderDiff !== 0) return orderDiff;
       return a.pollingUnit.code.localeCompare(b.pollingUnit.code);
@@ -456,7 +477,12 @@ export class CollationService {
 
     const data = pageRows.map(({ result, pollingUnit }) => {
       if (result) {
-        return { ...result, pollingUnit, flaggedByLga: flaggedSet.has(pollingUnit.id) };
+        return {
+          ...result,
+          ocrVerification: resolveOcrVerification(result),
+          pollingUnit,
+          flaggedByLga: flaggedSet.has(pollingUnit.id),
+        };
       }
       return {
         id: `not-started:${pollingUnit.id}`,
@@ -473,6 +499,8 @@ export class CollationService {
         invalidVotes: null,
         usedBallotPapers: null,
         partyResults: null,
+        ocrVerification: null,
+        ocrVerifiedAt: null,
         ec8aPhotoUrls: [] as string[],
         approvalComment: null,
         status: 'NOT_STARTED' as const,
@@ -564,6 +592,7 @@ export class CollationService {
       rejectedPus: 0,
       missingPus: 0,
       readyForLgaApproval: false,
+      ...emptyPuVerificationCounts(),
     };
 
     const data = wards.map((ward) => {
@@ -620,6 +649,8 @@ export class CollationService {
     data.sort((a, b) => {
       const orderDiff = (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9);
       if (orderDiff !== 0) return orderDiff;
+      const flaggedDiff = (b.puReadiness?.verifyFlagged ?? 0) - (a.puReadiness?.verifyFlagged ?? 0);
+      if (flaggedDiff !== 0) return flaggedDiff;
       return (a.ward?.name ?? '').localeCompare(b.ward?.name ?? '');
     });
 
@@ -824,6 +855,7 @@ export class CollationService {
 
     return results.map((result) => ({
       ...result,
+      ocrVerification: resolveOcrVerification(result as CollationFigures),
       pollingUnit: unitMap.get(result.scopeId) ?? null,
     }));
   }
@@ -860,6 +892,21 @@ export class CollationService {
         ? dto.ec8aPhotoUrls
         : existing?.ec8aPhotoUrls ?? [];
 
+    const figures = {
+      registeredVoters: dto.registeredVoters,
+      accreditedVoters: dto.accreditedVoters,
+      ballotPapersIssued: dto.ballotPapersIssued,
+      unusedBallotPapers: dto.unusedBallotPapers,
+      spoiledBallotPapers: dto.spoiledBallotPapers,
+      votesCast: dto.votesCast,
+      invalidVotes: dto.invalidVotes,
+      usedBallotPapers: dto.usedBallotPapers,
+      partyResults: dto.partyResults,
+      ec8aPhotoUrls,
+    };
+    const verification =
+      level === CollationLevel.POLLING_UNIT ? ocrVerificationWrite(figures) : {};
+
     const result = await this.prisma.collationResult.upsert({
       where: {
         campaignId_level_scopeType_scopeId: {
@@ -874,29 +921,13 @@ export class CollationService {
         level,
         scopeType: user.scopeType as ScopeType,
         scopeId: user.scopeId!,
-        registeredVoters: dto.registeredVoters,
-        accreditedVoters: dto.accreditedVoters,
-        ballotPapersIssued: dto.ballotPapersIssued,
-        unusedBallotPapers: dto.unusedBallotPapers,
-        spoiledBallotPapers: dto.spoiledBallotPapers,
-        votesCast: dto.votesCast,
-        invalidVotes: dto.invalidVotes,
-        usedBallotPapers: dto.usedBallotPapers,
-        partyResults: dto.partyResults,
-        ec8aPhotoUrls,
+        ...figures,
+        ...verification,
         status: CollationResultStatus.DRAFT,
       },
       update: {
-        registeredVoters: dto.registeredVoters,
-        accreditedVoters: dto.accreditedVoters,
-        ballotPapersIssued: dto.ballotPapersIssued,
-        unusedBallotPapers: dto.unusedBallotPapers,
-        spoiledBallotPapers: dto.spoiledBallotPapers,
-        votesCast: dto.votesCast,
-        invalidVotes: dto.invalidVotes,
-        usedBallotPapers: dto.usedBallotPapers,
-        partyResults: dto.partyResults,
-        ec8aPhotoUrls,
+        ...figures,
+        ...verification,
         status: CollationResultStatus.DRAFT,
         rejectionReason: null,
       },
@@ -916,11 +947,26 @@ export class CollationService {
     }
 
     const ec8aPhotoUrls = [...(result.ec8aPhotoUrls ?? []), photoUrl];
+    const verification =
+      result.level === CollationLevel.POLLING_UNIT
+        ? ocrVerificationWrite({ ...result, ec8aPhotoUrls })
+        : {};
 
     return this.prisma.collationResult.update({
       where: { id },
-      data: { ec8aPhotoUrls },
+      data: { ec8aPhotoUrls, ...verification },
     });
+  }
+
+  async scanEc8aPhoto(user: JwtPayload, photoUrl: string): Promise<VisionExtract> {
+    this.assertCollationUser(user);
+
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: user.campaignId },
+      select: { trackedParties: true },
+    });
+    const partyCodes = getPartyCodes(normalizeTrackedParties(campaign?.trackedParties));
+    return this.vision.extractEc8a([photoUrl], partyCodes);
   }
 
   async submitResult(user: JwtPayload, id: string) {
@@ -957,6 +1003,10 @@ export class CollationService {
     }
 
     const fromStatus = result.status as CollationResultStatus;
+    const verification =
+      result.level === CollationLevel.POLLING_UNIT
+        ? ocrVerificationWrite(result, { awaitingOcr: true })
+        : {};
 
     const submitted = await this.prisma.collationResult.update({
       where: { id },
@@ -965,6 +1015,7 @@ export class CollationService {
         submittedById: user.sub,
         submittedAt: new Date(),
         rejectionReason: null,
+        ...verification,
       },
     });
 
@@ -983,6 +1034,7 @@ export class CollationService {
     });
 
     if (submitted.level === CollationLevel.POLLING_UNIT) {
+      void this.ocrQueue.publish({ collationResultId: submitted.id });
       this.emitNotification({
         type: NotificationType.RESULT_SUBMITTED,
         campaignId: submitted.campaignId,
@@ -1537,6 +1589,10 @@ export class CollationService {
         rejectedPus: number;
         missingPus: number;
         readyForLgaApproval: boolean;
+        verifyMatched: number;
+        verifyFlagged: number;
+        verifyCheckPhoto: number;
+        verifyPending: number;
       }
     >();
 
@@ -1555,11 +1611,25 @@ export class CollationService {
             level: CollationLevel.POLLING_UNIT,
             scopeId: { in: puIds },
           },
-          select: { scopeId: true, status: true },
+          select: {
+            scopeId: true,
+            status: true,
+            registeredVoters: true,
+            accreditedVoters: true,
+            ballotPapersIssued: true,
+            unusedBallotPapers: true,
+            spoiledBallotPapers: true,
+            invalidVotes: true,
+            votesCast: true,
+            usedBallotPapers: true,
+            partyResults: true,
+            ec8aPhotoUrls: true,
+            ocrVerification: true,
+          },
         })
       : [];
 
-    const resultByPu = new Map(results.map((r) => [r.scopeId, r.status]));
+    const resultByPu = new Map(results.map((r) => [r.scopeId, r]));
     const pusByWard = new Map<string, string[]>();
     for (const pu of pus) {
       const list = pusByWard.get(pu.wardId) ?? [];
@@ -1574,16 +1644,18 @@ export class CollationService {
       let rejectedPus = 0;
       let missingPus = 0;
 
+      const verificationRows: typeof results = [];
       for (const puId of wardPuIds) {
-        const status = resultByPu.get(puId);
-        if (!status) {
+        const row = resultByPu.get(puId);
+        if (!row) {
           missingPus += 1;
           continue;
         }
-        if (status === CollationResultStatus.APPROVED) approvedPus += 1;
-        else if (status === CollationResultStatus.SUBMITTED) submittedPus += 1;
-        else if (status === CollationResultStatus.REJECTED) rejectedPus += 1;
+        if (row.status === CollationResultStatus.APPROVED) approvedPus += 1;
+        else if (row.status === CollationResultStatus.SUBMITTED) submittedPus += 1;
+        else if (row.status === CollationResultStatus.REJECTED) rejectedPus += 1;
         else missingPus += 1; // DRAFT counts as not ready
+        verificationRows.push(row);
       }
 
       const totalPus = wardPuIds.length;
@@ -1594,6 +1666,7 @@ export class CollationService {
         rejectedPus,
         missingPus,
         readyForLgaApproval: totalPus > 0 && approvedPus === totalPus,
+        ...countPuVerifications(verificationRows),
       });
     }
 
