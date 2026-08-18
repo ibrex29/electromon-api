@@ -9,6 +9,7 @@ If Vision is not configured, agents see `Google Cloud Vision is not configured` 
 
 ---
 
+
 ## Two jobs OCR does
 
 | Job | When | What happens |
