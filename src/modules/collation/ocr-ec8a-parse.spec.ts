@@ -4,12 +4,16 @@ import { arithmeticVerification } from './ocr-verification';
 import {
   MIN_AUTO_FILL_CONFIDENCE,
   mergeVisionWithArithmetic,
+  parseEc8aOcr,
   parseEc8aOcrText,
   parseNumberWords,
 } from './ocr-ec8a-parse';
 
 const osunVisionText = readFileSync(join(__dirname, 'ocr-ec8a-osun.fixture.txt'), 'utf8');
 const ayedadeVisionText = readFileSync(join(__dirname, 'ocr-ec8a-ayedade.fixture.txt'), 'utf8');
+const ayedadeTokens = JSON.parse(
+  readFileSync(join(__dirname, 'ocr-ec8a-ayedade.tokens.json'), 'utf8'),
+) as Array<{ text: string; x: number; y: number; w: number; h: number }>;
 
 describe('EC8A Vision text parse', () => {
   const sample = `
@@ -88,6 +92,11 @@ describe('EC8A Vision text parse', () => {
     expect(parseNumberWords(['zebo'])?.value).toBe(0);
     expect(parseNumberWords(['zero', 'zero', 'four'], 0)).toEqual({ value: 0, consumed: 1 });
     expect(parseNumberWords(['zero', 'zero', 'four'], 2)?.value).toBe(4);
+    expect(parseNumberWords(['ninty', 'five'])?.value).toBe(95);
+    expect(parseNumberWords(['seventh', 'four'])?.value).toBe(74);
+    expect(parseNumberWords(['tho'])?.value).toBe(2);
+    expect(parseNumberWords(['lero'])?.value).toBe(0);
+    expect(parseNumberWords(['ohe'])?.value).toBe(1);
   });
 
   it('reads boxed totals and party words from a real Vision EC8A dump', () => {
@@ -164,6 +173,28 @@ describe('EC8A Vision text parse', () => {
     expect(extracted.partyResults.APC).toBe(74);
     expect(extracted.partyResults.ZLP).toBe(1);
     expect(extracted.partyResults.AAC).toBe(0);
+  });
+
+  it('reads a real Vision word-box dump of a handwritten Osun EC8A', () => {
+    const extracted = parseEc8aOcr(ayedadeVisionText, ['APC', 'ADP', 'ADC', 'NNPP', 'ZLP'], ayedadeTokens);
+    expect(extracted.unreadable).toBe(false);
+    expect(extracted.confidence).toBe(1);
+    expect(extracted.fields).toMatchObject({
+      registeredVoters: 315,
+      accreditedVoters: 181,
+      ballotPapersIssued: 315,
+      unusedBallotPapers: 134,
+      spoiledBallotPapers: 0,
+      invalidVotes: 9,
+      votesCast: 172,
+      usedBallotPapers: 181,
+    });
+    expect(extracted.partyResults.A).toBe(95);
+    expect(extracted.partyResults.ADC).toBe(0);
+    expect(extracted.partyResults.ADP).toBe(2);
+    expect(extracted.partyResults.APC).toBe(74);
+    expect(extracted.partyResults.NNPP).toBe(0);
+    expect(extracted.partyResults.ZLP).toBe(1);
   });
 
   it('falls back to CHECK_PHOTO when Vision cannot read the form', () => {

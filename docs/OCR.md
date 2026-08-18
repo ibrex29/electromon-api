@@ -68,9 +68,11 @@ The form’s numbered boxes are clustered, then filled in order:
 
 The parser does **not** treat a lone `#2` or a serial number as a vote count. It looks for the boxed group and for labels like “accredited voters”.
 
+Vision also returns **word boxes** (x/y). When those are present, the parser reads the form as a grid: `#1`–`#8` values in the right-hand column, and each party row as serial → code → figures → words. That is how a slightly rotated, handwritten EC8A is read instead of flattening the table into one text blob.
+
 ### Party votes
 
-Prefer the **IN WORDS** column (fifty-nine, one hundred and two, including OCR typos like `fiftinine`). If words are missing, fall back to the figures column next to party codes (APC, PDP, …).
+Prefer the **IN WORDS** column (fifty-nine, one hundred and two, including OCR typos like `fiftinine`, `ninty`, `seventh four`, `tho`). If words are missing, fall back to the figures column next to party codes (APC, PDP, …). A handwritten `O` in a number box is 0.
 
 Campaign tracked-party codes are used as a last pass so extra parties still get a number when the table parse is thin.
 

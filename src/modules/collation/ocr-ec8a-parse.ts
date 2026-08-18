@@ -1,5 +1,12 @@
+import type { OcrToken } from './ocr-ec8a-layout';
+import { extractEc8aLayout } from './ocr-ec8a-layout';
+import { isPartyCode, parseNumberWords, tokenizeOcr } from './ocr-ec8a-words';
 import type { CollationFigures, OcrVerification, OcrVerificationDiff } from './ocr-verification';
 import { arithmeticVerification, partyVotesSum } from './ocr-verification';
+
+export type { OcrToken } from './ocr-ec8a-layout';
+export { tokensFromVisionPages } from './ocr-ec8a-layout';
+export { parseNumberWords } from './ocr-ec8a-words';
 
 const NUMBER_RE = /(\d{1,3}(?:,\d{3})+|\d{1,7})/;
 
@@ -84,55 +91,6 @@ interface FoundNumber {
   raw: string;
 }
 
-const ONES: Record<string, number> = {
-  zero: 0,
-  zebo: 0,
-  zevo: 0,
-  one: 1,
-  two: 2,
-  three: 3,
-  four: 4,
-  five: 5,
-  six: 6,
-  seven: 7,
-  eight: 8,
-  nine: 9,
-  ten: 10,
-  eleven: 11,
-  twelve: 12,
-  thirteen: 13,
-  fourteen: 14,
-  fifteen: 15,
-  sixteen: 16,
-  seventeen: 17,
-  eighteen: 18,
-  nineteen: 19,
-};
-
-const TENS: Record<string, number> = {
-  twenty: 20,
-  thirty: 30,
-  forty: 40,
-  fourty: 40,
-  fifty: 50,
-  sixty: 60,
-  seventy: 70,
-  eighty: 80,
-  ninety: 90,
-  ninty: 90,
-};
-
-const OCR_WORD_SPLITS: Record<string, string[]> = {
-  fiftinine: ['fifty', 'nine'],
-  fiftnine: ['fifty', 'nine'],
-  fiftenine: ['fifty', 'nine'],
-  ninetyfive: ['ninety', 'five'],
-  seventyfour: ['seventy', 'four'],
-  seventyfive: ['seventy', 'five'],
-  fortyfive: ['forty', 'five'],
-  fourtyfive: ['forty', 'five'],
-};
-
 const LARGE_SUMMARY_FIELDS = new Set([
   'registeredVoters',
   'accreditedVoters',
@@ -142,128 +100,6 @@ const LARGE_SUMMARY_FIELDS = new Set([
 
 /** Auto-fill the agent form only when identities hold or enough parties agree. */
 export const MIN_AUTO_FILL_CONFIDENCE = 0.75;
-
-const PARTY_CODE_STOP = new Set([
-  'AND',
-  'THE',
-  'FOR',
-  'OF',
-  'IN',
-  'TO',
-  'OR',
-  'SN',
-  'FORM',
-  'EC',
-  'CODE',
-  'DATE',
-  'NAME',
-  'TOTAL',
-  'VALID',
-  'VOTES',
-  'PARTY',
-  'POLITICAL',
-  'FIGURES',
-  'WORDS',
-  'BALLOT',
-  'PAPERS',
-  'AGENT',
-  'ZERO',
-  'ONE',
-  'TWO',
-  'THREE',
-  'FOUR',
-  'FIVE',
-  'SIX',
-  'SEVEN',
-  'EIGHT',
-  'NINE',
-  'TEN',
-  'FORTY',
-  'FOURTY',
-  'FIFTY',
-  'HUNDRED',
-  'THOUSAND',
-  'INEC',
-  'OSUN',
-  'IFE',
-]);
-
-function normalizeWord(token: string): string {
-  return token.toLowerCase().replace(/[^a-z]/g, '');
-}
-
-function tokenizeOcr(text: string): string[] {
-  const raw = text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(/\s+/).filter(Boolean);
-  const tokens: string[] = [];
-  for (const token of raw) {
-    const split = OCR_WORD_SPLITS[token];
-    if (split) tokens.push(...split);
-    else tokens.push(token);
-  }
-  return tokens;
-}
-
-export function parseNumberWords(tokens: string[], start = 0): { value: number; consumed: number } | null {
-  const first = normalizeWord(tokens[start] ?? '');
-  if (!first) return null;
-  if (first === 'zero' || first === 'zebo' || first === 'zevo') {
-    return { value: 0, consumed: 1 };
-  }
-
-  let total = 0;
-  let current = 0;
-  let consumed = 0;
-  let i = start;
-
-  while (i < tokens.length) {
-    const word = normalizeWord(tokens[i] ?? '');
-    if (!word) break;
-    if (word === 'and' && consumed > 0) {
-      i += 1;
-      consumed += 1;
-      continue;
-    }
-    if (ONES[word] != null) {
-      if (word === 'zero' || word === 'zebo' || word === 'zevo') break;
-      if (current >= 1 && current <= 19) break;
-      if (current % 10 !== 0) break;
-      current += ONES[word];
-      i += 1;
-      consumed += 1;
-      continue;
-    }
-    if (TENS[word] != null) {
-      if (current % 100 !== 0) break;
-      current += TENS[word];
-      i += 1;
-      consumed += 1;
-      continue;
-    }
-    if (word === 'hundred') {
-      current = (current || 1) * 100;
-      i += 1;
-      consumed += 1;
-      continue;
-    }
-    if (word === 'thousand') {
-      total += (current || 1) * 1000;
-      current = 0;
-      i += 1;
-      consumed += 1;
-      continue;
-    }
-    break;
-  }
-
-  if (consumed === 0) return null;
-  return { value: total + current, consumed };
-}
-
-function isPartyCode(token: string): boolean {
-  const code = token.toUpperCase();
-  if (!/^[A-Z]{1,6}$/.test(code)) return false;
-  return !PARTY_CODE_STOP.has(code);
-}
 
 function looksLikeLocationCode(text: string, index: number, raw: string): boolean {
   const digits = raw.replace(/,/g, '');
@@ -575,7 +411,13 @@ export function parseEc8aOcrText(text: string, partyCodes: string[] = []): Visio
   }
 
   reconcileExtract(fields, partyResults);
+  return finishExtract(fields, partyResults);
+}
 
+function finishExtract(
+  fields: Record<string, number | null>,
+  partyResults: Record<string, number>,
+): VisionExtract {
   const extractedCount =
     Object.values(fields).filter((value) => value != null).length + Object.keys(partyResults).length;
   const partySum = partyVotesSum(partyResults);
@@ -596,6 +438,30 @@ export function parseEc8aOcrText(text: string, partyCodes: string[] = []): Visio
     confidence,
     unreadable: extractedCount === 0 || (confidence != null && confidence < 0.45),
   };
+}
+
+export function parseEc8aOcr(
+  text: string,
+  partyCodes: string[] = [],
+  tokens: OcrToken[] = [],
+): VisionExtract {
+  const fromText = parseEc8aOcrText(text, partyCodes);
+  if (tokens.length < 30) return fromText;
+
+  const fromLayout = extractEc8aLayout(tokens);
+  const fields = { ...fromText.fields };
+  for (const [field, value] of Object.entries(fromLayout.fields)) {
+    if (value != null) fields[field] = value;
+  }
+
+  const layoutPartyCount = Object.keys(fromLayout.partyResults).length;
+  const partyResults =
+    layoutPartyCount >= 8
+      ? { ...fromLayout.partyResults }
+      : { ...fromText.partyResults, ...fromLayout.partyResults };
+
+  reconcileExtract(fields, partyResults);
+  return finishExtract(fields, partyResults);
 }
 
 function typedValue(input: CollationFigures, field: string): number | null {

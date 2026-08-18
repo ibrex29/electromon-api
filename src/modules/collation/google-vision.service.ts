@@ -4,7 +4,7 @@ import { ImageAnnotatorClient } from '@google-cloud/vision';
 import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { basename, join } from 'path';
-import { parseEc8aOcrText, type VisionExtract } from './ocr-ec8a-parse';
+import { parseEc8aOcr, tokensFromVisionPages, type OcrToken, type VisionExtract } from './ocr-ec8a-parse';
 
 const VISION_TIMEOUT_MS = 25_000;
 
@@ -49,9 +49,12 @@ export class GoogleVisionService {
     }
 
     const texts: string[] = [];
+    const tokens: OcrToken[] = [];
     for (const content of buffers) {
-      const text = await this.detectText(content);
-      if (text) texts.push(text);
+      const detected = await this.detectDocument(content);
+      if (!detected) continue;
+      texts.push(detected.text);
+      tokens.push(...detected.tokens);
     }
 
     if (texts.length === 0) {
@@ -64,7 +67,7 @@ export class GoogleVisionService {
       };
     }
 
-    return parseEc8aOcrText(texts.join('\n'), partyCodes);
+    return parseEc8aOcr(texts.join('\n'), partyCodes, tokens);
   }
 
   private createClient(): ImageAnnotatorClient | null {
@@ -103,19 +106,28 @@ export class GoogleVisionService {
     return null;
   }
 
-  private async detectText(content: Buffer): Promise<string | null> {
+  private async detectDocument(content: Buffer): Promise<{ text: string; tokens: OcrToken[] } | null> {
     if (!this.client) return null;
     try {
-      const request = this.client.documentTextDetection({ image: { content } });
+      const request = this.client.documentTextDetection({
+        image: { content },
+        imageContext: { languageHints: ['en'] },
+      });
       const [result] = await Promise.race([
         request,
         new Promise<never>((_, reject) => {
           setTimeout(() => reject(new Error('Vision timed out')), VISION_TIMEOUT_MS);
         }),
       ]);
-      const text = result.fullTextAnnotation?.text?.trim();
-      if (text) return text;
-      return result.textAnnotations?.[0]?.description?.trim() || null;
+      const text =
+        result.fullTextAnnotation?.text?.trim() ||
+        result.textAnnotations?.[0]?.description?.trim() ||
+        '';
+      if (!text) return null;
+      return {
+        text,
+        tokens: tokensFromVisionPages(result.fullTextAnnotation?.pages ?? []),
+      };
     } catch (error) {
       this.logger.warn({ err: error }, 'Google Cloud Vision documentTextDetection failed');
       return null;
