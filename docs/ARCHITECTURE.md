@@ -7,6 +7,8 @@ Electromon is split into **two independent Git repos** that communicate over HTT
 - **This repo** — NestJS 11 backend, Prisma, PostgreSQL, with `db/` and `shared/` as local packages
 - **[electromon-web](https://github.com/ibrex29/electromon-web)** — Next.js 16 dashboard (REST client only; no shared npm packages)
 
+Nationwide + backend-scaling deliberation (print/PDF): web repo [`docs/architecture-review.html`](https://github.com/ibrex29/electromon-web/blob/dev/docs/architecture-review.html) (Architecture Review v2.0). Visual target sketches: [`docs/presidential-architecture.html`](https://github.com/ibrex29/electromon-web/blob/dev/docs/presidential-architecture.html).
+
 Each project has its own **`infra/`** folder for Docker Compose and deployment.
 
 ```mermaid

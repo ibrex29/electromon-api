@@ -11,6 +11,7 @@ This repo is the **NestJS backend** for Electromon. The dashboard lives in a sep
 | [../README.md](../README.md) | **Start here** — run locally with/without Docker |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, module map, deployment |
 | [API.md](./API.md) | REST API reference |
+| [OCR.md](./OCR.md) | EC8A photo OCR, arithmetic checks, and ward chips |
 | [TESTING.md](./TESTING.md) | Unit and e2e tests |
 | [PHASE-0.md](./PHASE-0.md) | Phase 0 foundation (historical) |
 

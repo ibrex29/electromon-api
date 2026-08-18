@@ -33,6 +33,8 @@ On a phone on the same Wi-Fi, use the LAN URL logged at API boot (e.g. `http://1
 Swagger: http://localhost:3001/docs · OpenAPI: http://localhost:3001/docs/json  
 Demo password: `ChangeMe123!` — PU agent `+2348000000002`
 
+How scan, arithmetic, and ward chips work: [OCR.md](./OCR.md).
+
 ### Flow
 
 1. `POST /auth/login`
